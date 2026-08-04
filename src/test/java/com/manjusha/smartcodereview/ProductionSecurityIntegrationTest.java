@@ -3,6 +3,7 @@ package com.manjusha.smartcodereview;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,7 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.sql.init.mode=never",
-        "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://identity.example.test"
+        "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://identity.example.test",
+        "spring.security.oauth2.resourceserver.jwt.audiences=smart-code-review",
+        "management.endpoint.health.show-components=always"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("prod")
@@ -46,6 +50,9 @@ class ProductionSecurityIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private OAuth2ResourceServerProperties resourceServerProperties;
+
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
@@ -54,6 +61,12 @@ class ProductionSecurityIntegrationTest {
         when(jwtDecoder.decode("admin-token")).thenReturn(jwt("admin", "ORDER_ADMIN"));
         when(jwtDecoder.decode("operator-token")).thenReturn(jwt("operator", "OPERATIONS"));
         when(jwtDecoder.decode("reader-token")).thenReturn(jwt("reader", "ORDER_READER"));
+    }
+
+    @Test
+    void configuresAudienceValidationForTheOrderApi() {
+        assertThat(resourceServerProperties.getJwt().getAudiences())
+                .containsExactly("smart-code-review");
     }
 
     @Test
@@ -122,7 +135,9 @@ class ProductionSecurityIntegrationTest {
     @Test
     void restrictsOperationalEndpointsToOperators() throws Exception {
         mockMvc.perform(get("/actuator/health/readiness"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.components.db.status").value("UP"));
 
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isUnauthorized());
@@ -140,6 +155,7 @@ class ProductionSecurityIntegrationTest {
         return Jwt.withTokenValue(subject + "-token")
                 .header("alg", "none")
                 .subject(subject)
+                .audience(List.of("smart-code-review"))
                 .claim("roles", List.of(role))
                 .build();
     }

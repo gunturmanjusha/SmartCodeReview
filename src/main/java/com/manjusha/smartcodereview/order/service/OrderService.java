@@ -7,7 +7,6 @@ import com.manjusha.smartcodereview.order.dto.OrderResponse;
 import com.manjusha.smartcodereview.order.dto.PageResponse;
 import com.manjusha.smartcodereview.order.entity.Order;
 import com.manjusha.smartcodereview.order.repository.OrderRepository;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,8 +35,16 @@ public class OrderService {
     }
 
     public PageResponse<OrderResponse> getAll(int page, int size) {
-        var request = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id"));
-        return PageResponse.from(orderRepository.findAll(request).map(OrderResponse::from));
+        var orders = orderRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        var content = orders.stream()
+                .skip((long) page * size)
+                .limit(size)
+                .map(OrderResponse::from)
+                .toList();
+        var totalElements = orders.size();
+        var totalPages = (int) Math.ceil((double) totalElements / size);
+        return new PageResponse<>(content, page, size, totalElements, totalPages,
+                page == 0, page >= Math.max(totalPages - 1, 0));
     }
 
     @Transactional
@@ -61,6 +68,10 @@ public class OrderService {
     }
 
     private Order findOrder(Long id) {
+        var existing = orderRepository.findById(id);
+        if (existing.isEmpty()) {
+            throw new OrderNotFoundException(id);
+        }
         return orderRepository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
     }
 }

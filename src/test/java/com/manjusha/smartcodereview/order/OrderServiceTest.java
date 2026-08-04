@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,22 +60,21 @@ class OrderServiceTest {
     void listsOrdersInRepositoryOrder() {
         var first = order("Ada Lovelace", "USB-C Dock", 1, "89.00", OrderStatus.PENDING);
         var second = order("Grace Hopper", "Keyboard", 2, "75.50", OrderStatus.CONFIRMED);
-        var page = new org.springframework.data.domain.PageImpl<>(java.util.List.of(first, second));
-        when(orderRepository.findAll(org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
-                .thenReturn(page);
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Sort.class)))
+                .thenReturn(java.util.List.of(first, second));
 
         var responses = orderService.getAll(0, 20);
 
         assertThat(responses.content()).extracting(response -> response.customerName())
                 .containsExactly("Ada Lovelace", "Grace Hopper");
         assertThat(responses.totalElements()).isEqualTo(2);
-        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class));
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Sort.class));
     }
 
     @Test
     void updatesExistingOrder() {
         var existing = order("Ada Lovelace", "Dock", 1, "89.00", OrderStatus.PENDING);
-        var request = new OrderRequest("Ada Lovelace", "Dock Pro", 2,
+        var request = new OrderRequest("Grace Hopper", "Dock Pro", 2,
                 new BigDecimal("99.00"), OrderStatus.CONFIRMED);
         ReflectionTestUtils.setField(existing, "version", 3L);
         when(orderRepository.findById(7L)).thenReturn(Optional.of(existing));
@@ -82,6 +82,7 @@ class OrderServiceTest {
 
         var response = orderService.update(7L, 3L, request);
 
+        assertThat(response.customerName()).isEqualTo("Grace Hopper");
         assertThat(response.productName()).isEqualTo("Dock Pro");
         assertThat(response.quantity()).isEqualTo(2);
         assertThat(response.totalPrice()).isEqualByComparingTo("198.00");
@@ -111,6 +112,18 @@ class OrderServiceTest {
         orderService.delete(9L, 2L);
 
         verify(orderRepository).delete(existing);
+    }
+
+    @Test
+    void rejectsStaleDeleteWithoutDeletingOrder() {
+        var existing = order("Grace Hopper", "Keyboard", 1, "75.50", OrderStatus.PENDING);
+        ReflectionTestUtils.setField(existing, "version", 3L);
+        when(orderRepository.findById(9L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> orderService.delete(9L, 2L))
+                .isInstanceOf(StaleOrderVersionException.class)
+                .hasMessage("Order with id 9 was changed; retrieve the latest version and retry");
+        verify(orderRepository, never()).delete(existing);
     }
 
     @Test

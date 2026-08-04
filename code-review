@@ -5,7 +5,7 @@ set -uo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  ./code-review
+  ./code-review                    # main: full review; feature branch: compare with main
   ./code-review --repository
   ./code-review --staged
   ./code-review <base-revision>
@@ -18,20 +18,53 @@ if [[ $# -gt 1 ]]; then
 fi
 
 launcher_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-requested_scope="${1:---repository}"
+requested_argument="${1:-automatic}"
+requested_scope="${1:---auto}"
 git_available=false
 repository_root="$launcher_dir"
 current_branch="Unavailable - not a Git repository"
+branch_name=""
+auto_selected=false
+auto_repository_selected=false
 
 if command -v git >/dev/null 2>&1; then
   detected_root="$(git -C "$launcher_dir" rev-parse --show-toplevel 2>/dev/null || true)"
   if [[ -n "$detected_root" ]]; then
     git_available=true
     repository_root="$detected_root"
-    current_branch="$(git -C "$repository_root" branch --show-current 2>/dev/null || true)"
-    if [[ -z "$current_branch" ]]; then
+    branch_name="$(git -C "$repository_root" branch --show-current 2>/dev/null || true)"
+    current_branch="$branch_name"
+    if [[ -z "$branch_name" ]]; then
       current_branch="Detached HEAD at $(git -C "$repository_root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
     fi
+  fi
+fi
+
+if [[ "$requested_scope" == "--auto" ]]; then
+  if [[ "$git_available" != true ]]; then
+    echo "code-review: automatic review requires a Git feature branch." >&2
+    echo "Run from a Git repository, or use './code-review --repository' for an explicit full review." >&2
+    exit 2
+  fi
+  if [[ -z "$branch_name" ]]; then
+    echo "code-review: automatic review requires a named feature branch; detached HEAD is not supported." >&2
+    echo "Check out a feature branch, or use './code-review --repository' for an explicit full review." >&2
+    exit 2
+  fi
+  if [[ "$branch_name" == "main" ]]; then
+    requested_scope="--repository"
+    auto_repository_selected=true
+  else
+    if git -C "$repository_root" rev-parse --verify --quiet "main^{commit}" >/dev/null; then
+      requested_scope="main"
+    elif git -C "$repository_root" rev-parse --verify --quiet "origin/main^{commit}" >/dev/null; then
+      requested_scope="origin/main"
+    else
+      echo "code-review: automatic feature-branch review requires a local 'main' or 'origin/main' revision." >&2
+      echo "Fetch or create the main baseline, or pass an explicit base revision." >&2
+      exit 2
+    fi
+    auto_selected=true
   fi
 fi
 
@@ -39,6 +72,7 @@ case "$requested_scope" in
   --repository)
     scope_mode="repository"
     scope_description="Review the entire current application and repository artifacts."
+    resolved_base="N/A - repository review"
     ;;
   --staged)
     if [[ "$git_available" != true ]]; then
@@ -51,6 +85,7 @@ case "$requested_scope" in
     fi
     scope_mode="staged"
     scope_description="Review only the staged diff and directly affected unchanged context."
+    resolved_base="N/A - staged review"
     ;;
   -*)
     usage >&2
@@ -65,10 +100,31 @@ case "$requested_scope" in
       echo "code-review: base revision '$requested_scope' does not exist locally." >&2
       exit 2
     fi
+    if [[ -n "$(git -C "$repository_root" status --porcelain --untracked-files=normal)" ]]; then
+      echo "code-review: branch comparison requires a clean working tree." >&2
+      echo "Commit the feature changes, or stage only the intended files and run './code-review --staged'." >&2
+      exit 2
+    fi
+    merge_base="$(git -C "$repository_root" merge-base "$requested_scope" HEAD 2>/dev/null || true)"
+    if [[ -z "$merge_base" ]]; then
+      echo "code-review: '$requested_scope' and HEAD do not have a merge base." >&2
+      exit 2
+    fi
+    if git -C "$repository_root" diff --quiet "$merge_base" HEAD; then
+      echo "code-review: there are no committed changes between '$requested_scope' and HEAD to review." >&2
+      exit 2
+    fi
     scope_mode="branch comparison"
-    scope_description="Compare the merge base of '$requested_scope' and HEAD through HEAD."
+    scope_description="Review only files added, modified, renamed, or deleted from merge base '$merge_base' through HEAD, with minimal directly affected unchanged context."
+    resolved_base="$requested_scope"
     ;;
 esac
+
+if [[ "$auto_selected" == true ]]; then
+  echo "Automatically selected feature-branch review: '$current_branch' compared with '$requested_scope'."
+elif [[ "$auto_repository_selected" == true ]]; then
+  echo "Automatically selected complete repository review for 'main'."
+fi
 
 if ! command -v codex >/dev/null 2>&1; then
   echo "code-review: the Codex CLI is not installed or is not on PATH." >&2
@@ -108,14 +164,18 @@ prompt=$(cat <<PROMPT
 Use the repository-local code-review skill at .agents/skills/code-review/SKILL.md.
 Read AGENTS.md and both skill reference files completely before reviewing.
 
-Act as a senior enterprise application architect and code-review authority. Assess this Spring Boot
-work for production readiness, merge readiness, architecture, security, reliability, operability,
-scalability, maintainability, API/data integrity, and verification quality. Apply repository-specific
-standards and established Java/Spring engineering practices. Do not perform a superficial style-only
-review, and do not invent requirements or findings without evidence.
+Act as a senior Solution Architect and engineering-review authority. Assess this Spring Boot work
+for production and merge readiness across all seven categories in REVIEW_CONTROLS.md: architecture,
+code quality, API and integration design, security and data protection, reliability and operations,
+data and persistence, and testing. Identify the application purpose, primary business flow,
+components, dependency and data flow, runtime/deployment evidence, external integrations, and
+engineering controls before scoring. Apply repository-specific standards and established Java/Spring
+engineering practices. Do not perform a superficial style-only review, inflate severity, or invent
+business, platform, scale, security, or compliance requirements without evidence.
 
 Review mode: $scope_mode
-Requested argument: $requested_scope
+Requested argument: $requested_argument
+Resolved comparison base: $resolved_base
 Scope: $scope_description
 Feature/current branch: $current_branch
 Review date: $review_date
@@ -132,9 +192,11 @@ evidence. Inspect build/reports/jacoco/test/jacocoTestReport.xml and report exac
 coverage against the configured thresholds. Do not rerun Gradle from the read-only sandbox.
 
 Perform a read-only, evidence-based review. Do not modify application code, build files, tests,
-resources, Git state, or review instructions. Run applicable verification commands. Evaluate every
-control and return only the complete Markdown report required by REPORT_FORMAT.md as your final
-response. Do not invent evidence, scores, findings, Git state, or command results.
+resources, Git state, or review instructions. For branch or staged mode, inspect the changed code
+first and do not redesign or report unrelated unchanged code. Evaluate every control exactly once,
+separate routine developer corrections from decisions requiring architect judgment, and return only
+the complete Markdown report required by REPORT_FORMAT.md as your final response. Do not invent
+evidence, scores, findings, Git state, external systems, or command results.
 PROMPT
 )
 

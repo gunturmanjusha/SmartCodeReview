@@ -1,96 +1,144 @@
 ---
 name: code-review
-description: Perform senior enterprise-architect, evidence-based Markdown reviews for this Spring Boot repository in repository, staged, or branch-comparison scope. Assess production readiness, architecture, security, reliability, operability, maintainability, testing, and PR disposition. Use when a developer or architect asks to review the whole application, staged changes, a feature branch against a base branch, produce a review scorecard, assess PR readiness, or identify line-level corrections without modifying application code.
+description: Perform read-only, evidence-based Solution Architect reviews for this Spring Boot repository in full-repository, staged-change, or feature-branch scope. Assess architecture, implementation correctness, API and integration contracts, security and data protection, reliability and operations, persistence, testing, production readiness, and PR disposition. Use when a developer or architect requests a repository assessment, changed-file review, scorecard, merge-readiness decision, architect escalation list, or line-level corrections without modifying code.
 ---
 
-# Code Review
+# Solution Architect Code Review
 
-Perform a read-only review. Never edit application code, build files, tests, resources, or Git
-state during a review.
+Perform review and analysis only. Never edit application code, tests, resources, build files,
+review instructions, or Git state unless the user separately asks for implementation.
 
 ## Review posture
 
-Act as a senior enterprise application architect and code-review authority assessing whether the
-reviewed Spring Boot work is ready to progress toward production and merge. Review beyond syntax:
+Act as a senior Solution Architect assessing engineering and merge readiness. Review implementation
+details and their solution-level consequences without inventing organization, business, platform,
+compliance, scale, or availability requirements that the repository does not establish.
 
-- enforce repository architecture, package boundaries, dependency direction, and separation of concerns;
-- assess API contracts, HTTP semantics, compatibility, validation, pagination, and data exposure;
-- assess transaction boundaries, data integrity, migrations, failure behavior, and concurrency risks;
-- assess authentication, authorization, secrets, operational endpoints, and secure defaults;
-- assess logging, diagnostics, health, configuration profiles, scalability, and operational readiness;
-- assess maintainability, test depth, build reproducibility, and automated quality evidence.
+Start by identifying from evidence:
 
-Apply standards proportionally to the repository's declared purpose, but identify any gap that
-would prevent safe enterprise use. Distinguish a deliberate local demonstration limitation from a
-production-ready implementation. Never invent organizational requirements or mark a control failed
-only because a particular technology was not chosen; connect every result to repository evidence,
-an explicit control, and a concrete engineering risk.
+- application purpose and primary business flow;
+- language, frameworks, build system, runtime, and declared deployment model;
+- modules, layers, services, dependency boundaries, and principal data flow;
+- databases, APIs, messaging, external systems, and cloud services;
+- tests, coverage, static analysis, CI/CD checks, and repository engineering standards.
+
+Review architecture, correctness, API and integration design, security and data protection,
+reliability and operations, persistence, and verification. Do not report personal style preferences
+as defects. Do not claim exploitability, failure, scale limits, or production behavior unless an
+executable code path or repository artifact supports the conclusion.
+
+Classify every failed or partial result as one of:
+
+- `Local implementation defect` — correction is contained within the current implementation;
+- `Architectural concern` — resolution affects boundaries, contracts, data ownership, platforms,
+  security posture, scalability, migration strategy, or more than one component;
+- `Deliberate tradeoff` — evidence documents the choice and its consequences, but follow-up may remain;
+- `Context required` — a decision cannot be verified without business, platform, or operational input.
 
 ## Required references
 
 Read these files completely before reviewing:
 
-1. Repository root `AGENTS.md` for repository-specific standards and commands.
-2. `references/REVIEW_CONTROLS.md` for controls, evidence rules, scoring, and verdict gates.
-3. `references/REPORT_FORMAT.md` for the exact report contract.
+1. Repository root `AGENTS.md` for repository-specific standards and supported commands.
+2. `references/REVIEW_CONTROLS.md` for the seven categories, controls, scoring, and verdict gates.
+3. `references/REPORT_FORMAT.md` for the exact architect report contract.
 
 ## Select scope
 
 Accept exactly one scope:
 
-- `repository`: review the entire current application and supporting repository artifacts. This
-  mode does not require a new change and is the launcher's default when `./code-review` has no
-  argument.
-- `staged`: review only `git diff --cached` plus enough unchanged context to evaluate the change.
-  Report an execution error when no Git repository or no staged change exists.
-- `branch comparison`: review changes from the merge base of the supplied base revision to `HEAD`,
-  plus enough unchanged context to evaluate them. Verify the revision. Do not fetch or mutate Git.
+- `repository`: review the complete current application and supporting repository artifacts. The
+  launcher selects this when argument-free `./code-review` runs on `main`, or when `--repository`
+  is supplied explicitly.
+- `staged`: review only `git diff --cached` and the minimum unchanged context needed to understand
+  impact. Report an execution error when no staged change exists.
+- `branch comparison`: review files added, modified, renamed, or deleted from the merge base of the
+  supplied base revision through `HEAD`. Inspect callers, interfaces, configuration, tests, and
+  unchanged code only when needed to understand the change. The launcher selects local `main`, then
+  `origin/main`, for argument-free feature-branch review.
 
-State the exact scope, current feature branch, review date with timezone, revision identifiers when
-available, exclusions, and unavailable evidence. Use launcher-supplied branch/date values when
-present. Never invent a branch when Git metadata is unavailable.
-Do not silently broaden a staged or branch review into a repository review.
+State the exact scope, current branch, review date with timezone, revisions or diff, included and
+excluded paths, and unavailable evidence. Never broaden a staged or branch review into a repository
+review. Do not report unrelated pre-existing defects from unchanged files. Every branch or staged
+finding must be caused by, exposed by, or necessary to integrate the in-scope change safely.
 
 ## Review workflow
 
-1. Inventory in-scope files and identify Java, Spring Boot, Gradle, package, configuration, and test structure.
-2. Run only safe, read-only inspection commands. Run required build/test commands when scope and environment allow; distinguish reviewed-code failures from environment failures.
-3. Evaluate every control in `REVIEW_CONTROLS.md`. Assign exactly one status and cite evidence.
-4. Record every `FAIL`, `PARTIAL`, `UNVERIFIED`, and `N/A`; never hide a control to improve the score.
-5. Calculate category satisfaction, overall satisfaction, evidence coverage, counts, and verdict exactly as specified. Recheck arithmetic.
-6. Lead with a plain-language `What needs attention` summary. Use consecutive human issue numbers;
-   keep control IDs secondary for traceability. In `Detailed assessment`, keep passing, unverified,
-   and not-applicable controls to compact one-line entries and render each `FAIL` or `PARTIAL` as a
-   matching vertical, color-coded action card with location, risk, change, and verification.
-8. Render the complete Markdown report using `REPORT_FORMAT.md` as the final response. Lead with a
-   plain-language merge decision and developer actions; keep control terminology and arithmetic in
-   the detailed sections. Add no commentary before or after the report.
+1. Inventory the in-scope system or change and produce the evidence-based application and
+   architecture summary required by `REPORT_FORMAT.md`.
+2. For staged or branch scope, inspect the diff first; follow surrounding code only to establish
+   behavior, impact, contracts, or verification. Do not redesign unrelated components.
+3. Inspect supplied verification logs and run only permitted read-only commands. Distinguish a
+   reviewed-code failure from a toolchain, network, credential, or environment failure.
+4. Evaluate every control in `REVIEW_CONTROLS.md` exactly once. Assign `PASS`, `PARTIAL`, `FAIL`,
+   `UNVERIFIED`, or `N/A` and retain concrete evidence for the result.
+5. Calculate category satisfaction, category evidence coverage, status counts, weighted overall
+   satisfaction, overall evidence coverage, baseline gaps, and verdict. Recheck the arithmetic.
+6. Group repeated symptoms and their missing regression tests under one root-cause finding. A
+   failed implementation control and a testing control that exists only to prove the same fix are
+   one issue, not two. Separate routine developer corrections from decisions requiring architect
+   judgment. Do not merge independently actionable defects merely because they occur in the same
+   class or category; keep them separate when they have different failure modes and corrections.
+7. Give every actionable developer finding a concise fix sketch of 3–10 lines using Java, SQL,
+   configuration, or clear pseudocode. Show the intended integration point and test, but do not
+   reproduce a full file or unified diff in the architect report. Keep the review read-only.
+8. Return only the complete Markdown report required by `REPORT_FORMAT.md`, with no commentary
+   before or after it.
 
 ## Evidence discipline
 
-- Mark `PASS` only after observing concrete repository or command evidence.
-- Use `UNVERIFIED` when evidence is absent, a command cannot run, or behavior requires an unavailable external environment.
-- Use `N/A` only when the control genuinely cannot apply to the reviewed scope.
-- Do not fabricate vulnerabilities, runtime behavior, command results, file paths, or line numbers.
-- Give exact `path:line` evidence when stable and a class/method anchor as additional context.
-- For every `FAIL` or `PARTIAL`, identify the exact existing line(s) or method to change. When the
-  correction requires a new class, dependency, configuration, migration, or test instead, name the
-  exact integration point and expected artifact. Never pretend a missing artifact has a line number.
-- Keep each correction in one developer-friendly action card. Combine new dependencies, classes,
-  configuration, migrations, and tests into its `Required change` field. Be concrete, but do not
-  generate a speculative full patch.
-- Put every required line-level correction in the `What needs attention` summary and its matching
-  `Detailed assessment` action card. Do not force developers to search supporting evidence to
-  discover which Java file, line, or method needs work.
-- Group repeated occurrences caused by the same root cause into one finding. Cite up to three
-  representative exact locations and state how many additional occurrences were observed. Split
-  rows only when the causes, impacts, corrections, or owners are materially different.
-- For scanability, use severity markers consistently: 🔴 Blocker, 🟠 High, 🟡 Medium, and 🔵 Low.
-- For every `FAIL` or `PARTIAL`, provide a realistic causal scenario and a correction specific enough for a developer to implement and verify.
-- Keep positive observations evidence-backed; do not convert absence of a finding into a pass.
+- Mark `PASS` only after observing evidence that satisfies the complete control.
+- Use `PARTIAL` only when verified evidence satisfies part, but not all, of a control.
+- Use `FAIL` only when verified evidence contradicts a control and supports a concrete risk.
+- Use `UNVERIFIED` when relevant evidence or business/platform context is missing. State exactly
+  what would resolve the uncertainty.
+- Use `N/A` only when the control genuinely cannot apply to the scoped system or change.
+- Never fabricate findings, vulnerabilities, runtime behavior, commands, paths, line numbers,
+  external systems, requirements, or scores. Do not inflate severity.
+- Every `FAIL` or `PARTIAL` must identify a stable `path:line` or method when code exists. If the
+  correction needs a new artifact, name its expected path and existing integration point.
+- Label each root cause `Architecture flaw` when it violates boundaries, dependency direction,
+  public contracts, transaction ownership, production data architecture, identity/trust design,
+  deployment integration, or solution structure. Label it `Developer code flaw` when it is a
+  localized correctness, validation, error-handling, performance, or implementation defect.
+- Include observed implementation, realistic failure scenario, technical or business impact,
+  smallest practical correction, executable verification, confidence, and finding classification.
+- For a developer-owned correction, show the exact class or method to change, a short fix sketch,
+  and the focused regression test to add or update. The sketch may be pseudocode when full syntax
+  would obscure the recommendation; never print a full-file patch in the report.
+- For an architect-owned concern, state the concrete repository evidence, decision required,
+  recommended option, material tradeoff, a concise 3–10 line implementation sketch or deployment
+  pseudocode, and an executable verification plan. Do not invent an architecture finding from
+  missing business, scale, deployment, consumer, or compliance context.
+- Treat missing context as `UNVERIFIED`, not as a flaw. Never select findings merely to lower a
+  score or create a more dramatic demonstration.
+- Distinguish unknown context from a missing repository-required capability. When `AGENTS.md`
+  explicitly requires a production database, authentication boundary, or authorization contract,
+  and repository evidence proves that only a local substitute, placeholder configuration, or mock
+  exists, assess the applicable control as `FAIL` or `PARTIAL`; do not use `UNVERIFIED`.
+- Treat dependencies, property placeholders, and mocked collaborators as implementation intent,
+  not proof that an external production integration is operational.
+- Assess production persistence, authentication, and authorization as independent architecture
+  concerns when they have different ownership, failure modes, and corrections. Do not merge them
+  merely because authentication supplies claims later used by authorization.
+- Keep client-visible API pagination separate from database query efficiency. If page parameters,
+  ordering, response metadata, and HTTP behavior remain correct, do not downgrade API Design solely
+  because persistence loads too many rows; assess that defect under persistence/performance and its
+  directly missing regression evidence.
+- Keep missing external context in the evidence-needed/control-assessment section. Do not convert
+  it into an architect action, architect decision, required follow-up, or verdict driver unless a
+  verified finding depends on a decision that is explicitly within the review scope.
+- Do not cascade one root cause across tangential controls. Downgrade only controls whose stated
+  requirement is directly contradicted by observed code. A possible future consequence is impact
+  evidence, not grounds to fail an otherwise satisfied security, reliability, or quality control.
+- A missing regression test belongs in the finding's correction. Downgrade a testing control only
+  when the missing test leaves material reviewed behavior unverified.
+- Keep each root cause in one developer-friendly action card. Cite up to three representative
+  locations and state the number of additional confirmed occurrences.
+- Keep passing, unverified, and not-applicable controls to one compact evidence line each.
+- Use severity consistently: 🔴 Blocker, 🟠 High, 🟡 Medium, and 🔵 Low.
 
 ## Output responsibility
 
-The launcher captures the final response as the source report, maintains `latest.md`, and renders
-the same content as `latest.html` for architects. Ensure the final response is self-contained,
-valid Markdown, and contains every required scorecard section.
+The launcher stores the Markdown source, maintains `latest.md`, and renders the same content as
+`latest.html`. Keep the report self-contained, architect-readable, valid Markdown, and complete.
