@@ -65,11 +65,14 @@ class OrderApiIntegrationTest {
                 .andExpect(header().string("ETag", initialEtag))
                 .andExpect(jsonPath("$.customerName").value("Grace Hopper"));
 
-        var update = VALID_ORDER.replace("PENDING", "SHIPPED").replace("quantity\": 2", "quantity\": 3");
+        var update = VALID_ORDER.replace("Grace Hopper", "Katherine Johnson")
+                .replace("PENDING", "SHIPPED")
+                .replace("quantity\": 2", "quantity\": 3");
         var updateResult = mockMvc.perform(put(location).with(httpBasic("reviewer", "review-demo-only"))
                         .header("If-Match", initialEtag)
                         .contentType(MediaType.APPLICATION_JSON).content(update))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerName").value("Katherine Johnson"))
                 .andExpect(jsonPath("$.status").value("SHIPPED"))
                 .andExpect(jsonPath("$.totalPrice").value(226.5))
                 .andReturn();
@@ -106,6 +109,17 @@ class OrderApiIntegrationTest {
                 .andExpect(jsonPath("$.message")
                         .value("Order with id " + orderId
                                 + " was changed; retrieve the latest version and retry"));
+
+        mockMvc.perform(delete(location).with(httpBasic("reviewer", "review-demo-only"))
+                        .header("If-Match", staleEtag))
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(jsonPath("$.message")
+                        .value("Order with id " + orderId
+                                + " was changed; retrieve the latest version and retry"));
+
+        mockMvc.perform(get(location))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(Long.parseLong(orderId)));
     }
 
     @Test

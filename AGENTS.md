@@ -6,6 +6,10 @@ This repository contains one Order Management REST microservice under
 `com.manjusha.smartcodereview`. It uses Java 23, Spring Boot 4.1, Gradle 9.6, Spring MVC,
 Spring Data JPA, Bean Validation, H2, Actuator, JUnit 5, Mockito, AssertJ, and MockMvc.
 
+Repository reviews assess the service as a production candidate, not only as a local demonstration.
+Configuration keys and dependencies show design intent but do not by themselves prove that a
+production dependency or security boundary is operational.
+
 Do not add the Markdown-driven review model to the production Java runtime. Review automation
 belongs in `AGENTS.md`, `.agents/skills/code-review`, and the root `code-review` launcher.
 
@@ -43,6 +47,10 @@ belongs in `AGENTS.md`, `.agents/skills/code-review`, and the root `code-review`
 - Treat H2, `ddl-auto=create-drop`, `data.sql`, and the H2 console as local demonstration/test
   facilities. Production profiles must use persistent storage, versioned migrations, externally
   supplied secrets, and must disable the H2 console and destructive schema generation.
+- Production readiness requires evidence for a durable target database: a deployable PostgreSQL
+  binding or environment contract, Flyway verification against PostgreSQL rather than only H2,
+  and documented ownership of backup, restore, availability, and credentials. A PostgreSQL driver
+  and unresolved environment properties alone do not satisfy this requirement.
 - Do not log complete request/response objects when they may contain customer or sensitive data.
 
 ## Exceptions, logging, security, and reliability
@@ -55,6 +63,12 @@ belongs in `AGENTS.md`, `.agents/skills/code-review`, and the root `code-review`
 - Do not add secrets, tokens, production passwords, or private customer data to source control.
 - Apply authentication and authorization before exposing write endpoints outside a trusted demo
   environment. Keep operational endpoints restricted appropriately in non-local profiles.
+- Production authentication requires an operational identity-provider contract covering issuer,
+  audience, signing keys/JWKS, token validation, and failure behavior. A mocked `JwtDecoder` proves
+  Spring rule wiring but does not prove the production authentication boundary.
+- Production authorization requires an owned contract for the external claim carrying roles, the
+  allowed `ORDER_READER`, `ORDER_ADMIN`, and `OPERATIONS` values, provisioning/revocation ownership,
+  and end-to-end allow/deny verification with signed tokens. Route rules alone are partial evidence.
 - Handle malformed input, invalid enum values, persistence conflicts, and unexpected failures with
   deterministic client-safe responses. Avoid catching exceptions only to suppress them.
 - Propagate or create correlation identifiers at service boundaries. Keep health/readiness signals
