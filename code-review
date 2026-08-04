@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  ./code-review
+  ./code-review --repository
+  ./code-review --staged
+  ./code-review <base-revision>
+USAGE
+}
+
+if [[ $# -gt 1 ]]; then
+  usage >&2
+  exit 2
+fi
+
+launcher_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+requested_scope="${1:---repository}"
+git_available=false
+repository_root="$launcher_dir"
+current_branch="Unavailable - not a Git repository"
+
+if command -v git >/dev/null 2>&1; then
+  detected_root="$(git -C "$launcher_dir" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$detected_root" ]]; then
+    git_available=true
+    repository_root="$detected_root"
+    current_branch="$(git -C "$repository_root" branch --show-current 2>/dev/null || true)"
+    if [[ -z "$current_branch" ]]; then
+      current_branch="Detached HEAD at $(git -C "$repository_root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    fi
+  fi
+fi
+
+case "$requested_scope" in
+  --repository)
+    scope_mode="repository"
+    scope_description="Review the entire current application and repository artifacts."
+    ;;
+  --staged)
+    if [[ "$git_available" != true ]]; then
+      echo "code-review: staged mode requires this directory to be a Git repository with a working git command." >&2
+      exit 2
+    fi
+    if git -C "$repository_root" diff --cached --quiet --exit-code; then
+      echo "code-review: there are no staged changes to review." >&2
+      exit 2
+    fi
+    scope_mode="staged"
+    scope_description="Review only the staged diff and directly affected unchanged context."
+    ;;
+  -*)
+    usage >&2
+    exit 2
+    ;;
+  *)
+    if [[ "$git_available" != true ]]; then
+      echo "code-review: branch comparison requires this directory to be a Git repository with a working git command." >&2
+      exit 2
+    fi
+    if ! git -C "$repository_root" rev-parse --verify --quiet "${requested_scope}^{commit}" >/dev/null; then
+      echo "code-review: base revision '$requested_scope' does not exist locally." >&2
+      exit 2
+    fi
+    scope_mode="branch comparison"
+    scope_description="Compare the merge base of '$requested_scope' and HEAD through HEAD."
+    ;;
+esac
+
+if ! command -v codex >/dev/null 2>&1; then
+  echo "code-review: the Codex CLI is not installed or is not on PATH." >&2
+  exit 127
+fi
+
+verification_temp="$(mktemp "${TMPDIR:-/tmp}/smart-code-review-verification.XXXXXX")"
+trap 'rm -f "$verification_temp"' EXIT
+
+echo "Running required verification: ./gradlew clean test --console=plain"
+set +e
+./gradlew clean test --console=plain 2>&1 | tee "$verification_temp"
+test_status=${PIPESTATUS[0]}
+
+echo
+echo "Running required verification: ./gradlew build --console=plain"
+./gradlew build --console=plain 2>&1 | tee -a "$verification_temp"
+build_status=${PIPESTATUS[0]}
+
+echo
+echo "Running quality gate: ./gradlew jacocoTestCoverageVerification jacocoTestReport --console=plain"
+./gradlew jacocoTestCoverageVerification jacocoTestReport --console=plain 2>&1 | tee -a "$verification_temp"
+coverage_status=${PIPESTATUS[0]}
+set -e
+
+report_dir="$repository_root/build/reports/code-review"
+mkdir -p "$report_dir"
+timestamp="$(date -u '+%Y%m%dT%H%M%SZ')"
+review_date="$(date '+%Y-%m-%d %H:%M:%S %Z (%z)')"
+report_path="$report_dir/code-review-$timestamp.md"
+transcript_path="$report_dir/code-review-$timestamp.log"
+verification_path="$report_dir/verification-$timestamp.log"
+temporary_report="$report_dir/.code-review-$timestamp.tmp.md"
+cp "$verification_temp" "$verification_path"
+
+prompt=$(cat <<PROMPT
+Use the repository-local code-review skill at .agents/skills/code-review/SKILL.md.
+Read AGENTS.md and both skill reference files completely before reviewing.
+
+Act as a senior enterprise application architect and code-review authority. Assess this Spring Boot
+work for production readiness, merge readiness, architecture, security, reliability, operability,
+scalability, maintainability, API/data integrity, and verification quality. Apply repository-specific
+standards and established Java/Spring engineering practices. Do not perform a superficial style-only
+review, and do not invent requirements or findings without evidence.
+
+Review mode: $scope_mode
+Requested argument: $requested_scope
+Scope: $scope_description
+Feature/current branch: $current_branch
+Review date: $review_date
+
+Display the feature/current branch and review date prominently in both the At a glance table and
+Review scope. Use these exact launcher-supplied values; do not infer or invent branch metadata.
+
+The launcher ran the repository-required commands immediately before this read-only review:
+- ./gradlew clean test --console=plain (exit status $test_status)
+- ./gradlew build --console=plain (exit status $build_status)
+- ./gradlew jacocoTestCoverageVerification jacocoTestReport --console=plain (exit status $coverage_status)
+The complete output is at $verification_path. Inspect that log and generated test results as
+evidence. Inspect build/reports/jacoco/test/jacocoTestReport.xml and report exact line/branch
+coverage against the configured thresholds. Do not rerun Gradle from the read-only sandbox.
+
+Perform a read-only, evidence-based review. Do not modify application code, build files, tests,
+resources, Git state, or review instructions. Run applicable verification commands. Evaluate every
+control and return only the complete Markdown report required by REPORT_FORMAT.md as your final
+response. Do not invent evidence, scores, findings, Git state, or command results.
+PROMPT
+)
+
+codex_args=(--ask-for-approval never exec --ephemeral --sandbox read-only --color never
+  --cd "$repository_root" --output-last-message "$temporary_report")
+
+if [[ "$git_available" != true ]]; then
+  codex_args+=(--skip-git-repo-check)
+fi
+
+echo "Running $scope_mode code review from $repository_root"
+echo "Transcript: $transcript_path"
+
+set +e
+codex "${codex_args[@]}" "$prompt" 2>&1 | tee "$transcript_path"
+codex_status=${PIPESTATUS[0]}
+set -e
+
+if [[ -s "$temporary_report" ]]; then
+  mv "$temporary_report" "$report_path"
+  cp "$report_path" "$report_dir/latest.md"
+  html_report_path="${report_path%.md}.html"
+  renderer="$repository_root/.agents/skills/code-review/scripts/RenderReport.java"
+  if java "$renderer" "$report_path" "$html_report_path"; then
+    cp "$html_report_path" "$report_dir/latest.html"
+  else
+    echo "code-review: Markdown report succeeded, but HTML rendering failed." >&2
+  fi
+  echo
+  echo "Markdown report: $report_path"
+  echo "Latest report: $report_dir/latest.md"
+  if [[ -s "$report_dir/latest.html" ]]; then
+    echo "HTML report: $html_report_path"
+    echo "Latest HTML report: $report_dir/latest.html"
+  fi
+elif [[ -e "$temporary_report" ]]; then
+  mv "$temporary_report" "$report_dir/code-review-$timestamp-partial.md"
+fi
+
+if [[ $codex_status -ne 0 ]]; then
+  echo "code-review: Codex execution failed with status $codex_status; partial output is preserved in $transcript_path." >&2
+  exit "$codex_status"
+fi
+
+if [[ ! -s "$report_path" ]]; then
+  echo "code-review: Codex completed without producing a Markdown report; output is preserved in $transcript_path." >&2
+  exit 1
+fi
