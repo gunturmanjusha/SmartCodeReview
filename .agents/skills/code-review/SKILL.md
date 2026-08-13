@@ -150,4 +150,4 @@ finding must be caused by, exposed by, or necessary to integrate the in-scope ch
 ## Output responsibility
 
 The launcher stores the Markdown source, maintains `latest.md`, and renders the same content as
-`latest.html`. Keep the report self-contained, architect-readable, valid Markdown, and complete.
+`index.html`. Keep the report self-contained, architect-readable, valid Markdown, and complete.

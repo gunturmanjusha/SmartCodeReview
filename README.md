@@ -125,13 +125,13 @@ Open it with:
 
 ```shell
 # macOS
-open build/reports/code-review/latest.html
+open build/reports/code-review/index.html
 
 # Linux
-xdg-open build/reports/code-review/latest.html
+xdg-open build/reports/code-review/index.html
 
 # Windows PowerShell
-start build/reports/code-review/latest.html
+start build/reports/code-review/index.html
 ```
 
 The report leads with three independent decisions—developer implementation readiness, architect
@@ -195,7 +195,7 @@ git commit -m "Describe the feature"
 ./code-review
 
 # macOS: open the architect report.
-open build/reports/code-review/latest.html
+open build/reports/code-review/index.html
 ```
 
 To review work before committing, stage the intended files and use staged mode:
@@ -203,7 +203,7 @@ To review work before committing, stage the intended files and use staged mode:
 ```shell
 git add path/to/changed/files
 ./code-review --staged
-open build/reports/code-review/latest.html
+open build/reports/code-review/index.html
 ```
 
 ### Generated reports
@@ -217,7 +217,7 @@ open build/reports/code-review/latest.html
 | `build/reports/code-review/verification-<timestamp>.log` | Complete build and test evidence used by the reviewer. |
 | `build/reports/jacoco/test/html/index.html` | Human-readable test coverage report. |
 
-Architects use `latest.html` and its JaCoCo link. Detailed Gradle output remains in the timestamped
+Architects use `index.html` and its JaCoCo link. Detailed Gradle output remains in the timestamped
 verification log for audit or troubleshooting and is intentionally omitted from the architect report.
 
 The `build/` directory is intentionally ignored by Git because reports are generated results tied to

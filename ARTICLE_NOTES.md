@@ -261,7 +261,7 @@ The executable root `code-review` Bash script is the execution layer.
 - It invokes `codex exec` ephemerally with read-only sandboxing, no approval prompts, and an output
   file for the final Markdown message (`code-review:203-215`).
 - It saves timestamped verification and Codex transcripts, timestamped Markdown and HTML reports,
-  and updates `build/reports/code-review/latest.md` and `latest.html` (`code-review:153-161,218-234`).
+  and updates `build/reports/code-review/latest.md` and `index.html` (`code-review:153-161,218-234`).
 - `RenderReport.java` converts the Markdown source into the styled HTML presentation
   (`RenderReport.java:21-112`).
 - A Codex failure returns the Codex status and preserves the transcript; partial Markdown is
@@ -330,7 +330,7 @@ runs before the agent loads repository context:
    `code-review:203-220`:** Codex returns only the contracted Markdown; the launcher stores the
    timestamped report and refreshes `latest.md`.
 9. **HTML report generation — `code-review:221-234` and `RenderReport.java:21-112`:** render the same
-   Markdown to timestamped HTML and refresh `latest.html`.
+   Markdown to timestamped HTML and refresh `index.html`.
 
 # 6. Current Verification Results
 
