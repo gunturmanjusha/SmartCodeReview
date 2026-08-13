@@ -1,490 +1,490 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Solution Architect Code Review</title>
-  <style>
-    html { scroll-behavior:smooth; }
-    :root {
-      color-scheme:light;
-      --ink:#172033; --muted:#607087; --line:#d7dfeb; --line-strong:#c4cfdf;
-      --surface:#ffffff; --navy:#142b4a; --blue:#2463c7;
-      --blue-soft:#eaf3ff; --green-soft:#eaf8f0; --yellow-soft:#fff8d9;
-      --orange-soft:#fff0e4; --red-soft:#ffecef; --purple-soft:#f3edff;
-      --slate-soft:#eef2f7; --shadow:0 22px 60px #1d315221,0 3px 10px #1d315214;
-    }
-    * { box-sizing:border-box; }
-    body {
-      margin:0; color:var(--ink);
-      background:radial-gradient(circle at 8% 0%,#dce9ff 0,transparent 28rem),
-        radial-gradient(circle at 92% 8%,#eee5ff 0,transparent 25rem),#edf1f7;
-      font:15px/1.62 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    }
-    main { max-width:1500px; margin:34px auto; padding:42px 50px 56px; background:var(--surface);
-      border:1px solid #fff; border-radius:18px; box-shadow:var(--shadow); }
-    h1 { margin:0 0 12px; padding:0 0 18px; color:var(--navy); font-size:2.25rem;
-      line-height:1.15; letter-spacing:-.025em; border-bottom:4px solid transparent;
-      border-image:linear-gradient(90deg,var(--blue),#7652bd 58%,#d9e2ee) 1; }
-    h2 { margin:42px 0 16px; padding:10px 14px; color:var(--navy); font-size:1.34rem;
-      line-height:1.25; letter-spacing:-.01em; background:linear-gradient(90deg,#eef4fc,transparent 82%);
-      border-left:4px solid var(--blue); border-bottom:1px solid var(--line); border-radius:6px 0 0 6px; }
-    h3 { margin:30px 0 15px; padding:13px 16px; color:#263f68; font-size:1.08rem;
-      background:linear-gradient(90deg,#edf2f9,#f8fafe); border:1px solid #dbe3ef;
-      border-left:6px solid #6b7f9e; border-radius:9px; box-shadow:0 3px 10px #233a5b0a; }
-    h3.sev-blocker { background:linear-gradient(90deg,#ffe7eb,#fff6f7); border-color:#e8aab5;
-      border-left-color:#b42336; color:#82162a; }
-    h3.sev-high { background:linear-gradient(90deg,#ffebdc,#fff7f0); border-color:#f0bd96;
-      border-left-color:#e56b16; color:#93400b; }
-    h3.sev-medium { background:linear-gradient(90deg,#fff5c9,#fffbed); border-color:#e6d17c;
-      border-left-color:#d5a400; color:#785b00; }
-    h3.sev-low { background:linear-gradient(90deg,#e5f1ff,#f4f9ff); border-color:#afceed;
-      border-left-color:#3478c9; color:#164e8d; }
-    h3[id^="issue-"] { scroll-margin-top:18px; }
-    p { margin:10px 0; }
-    a { color:#165fb9; font-weight:600; text-decoration-color:#8bb5e2; text-underline-offset:2px; }
-    a:hover { color:#0c4386; text-decoration-thickness:2px; }
-    code { padding:2px 5px; color:#8d2850; background:#eef2f7; border:1px solid #e0e6ef;
-      border-radius:4px; font-size:.91em; }
-    pre { padding:18px 20px; overflow:auto; color:#f4f7fb;
-      background:linear-gradient(145deg,#172033,#223451); border:1px solid #344764;
-      border-radius:10px; box-shadow:0 8px 22px #17203320; }
-    pre.code-diff { border-left:6px solid #25a65a; box-shadow:inset 0 0 0 1px #30405d; }
-    pre code { color:inherit; background:transparent; border:0; padding:0; }
-    li { margin:6px 0; }
-    .meta { display:inline-block; margin:0 0 18px; padding:5px 10px; color:var(--muted);
-      background:#f2f5f9; border:1px solid #e0e6ef; border-radius:999px; font-size:.82rem; }
-    blockquote { margin:18px 0 28px; padding:20px 22px; background:#fff7df;
-      border:1px solid #ecd8a0; border-left:7px solid #e59b13; border-radius:10px;
-      box-shadow:0 8px 22px #2f466512; }
-    blockquote h2 { margin:0 0 12px; padding:0; border:0; color:#8a4b00; background:none; }
-    blockquote p { margin:9px 0; }
-    blockquote.decision-pass { background:var(--green-soft); border-color:#99d1af; border-left-color:#25864b; }
-    blockquote.decision-pass h2 { color:#176237; }
-    blockquote.decision-followup { background:var(--yellow-soft); border-color:#e2ca6f; border-left-color:#d5a400; }
-    blockquote.decision-followup h2 { color:#785b00; }
-    blockquote.decision-changes { background:var(--orange-soft); border-color:#edb487; border-left-color:#e56b16; }
-    blockquote.decision-changes h2 { color:#93400b; }
-    blockquote.decision-blocked { background:var(--red-soft); border-color:#e3a1ad; border-left-color:#b42336; }
-    blockquote.decision-blocked h2 { color:#82162a; }
-    blockquote.decision-evidence { background:var(--slate-soft); border-color:#bdc8d7; border-left-color:#6b7f9e; }
-    blockquote.decision-evidence h2 { color:#344967; }
-    blockquote.decision-readiness { padding:18px; background:linear-gradient(135deg,#f7f9fd,#f0f4fa);
-      border-color:#cbd6e5; border-left-color:var(--navy); }
-    blockquote.decision-readiness h2 { padding:0 4px 12px; color:var(--navy); border-bottom:1px solid #cdd7e5; }
-    blockquote.decision-readiness p { padding:10px 12px; background:#fff; border:1px solid #dde4ee;
-      border-left:5px solid #455a77; border-radius:7px; box-shadow:0 2px 7px #233a5b0a; }
-    blockquote.decision-readiness p:nth-of-type(1) { background:var(--orange-soft); border-color:#efc29f;
-      border-left-color:#e56b16; }
-    blockquote.decision-readiness p:nth-of-type(2) { background:var(--purple-soft); border-color:#cdbce9;
-      border-left-color:#7451b9; }
-    blockquote.decision-readiness p:nth-of-type(3) { background:var(--red-soft); border-color:#e5adb6;
-      border-left-color:#b42336; }
-    blockquote.decision-readiness p:nth-of-type(4) { background:#fff4e8; border-color:#efc6a4;
-      border-left-color:#ef7d20; }
-    blockquote.decision-readiness p:nth-of-type(5) { background:var(--green-soft); border-color:#b0d9bf;
-      border-left-color:#25864b; }
-    .executive-cards,.final-recommendation-cards { display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:0; list-style:none; }
-    .executive-cards li,.final-recommendation-cards li { position:relative; margin:0; padding:17px 18px;
-      background:#f4f7fb; border:1px solid #d8e1ee; border-left:7px solid #5f7ea8;
-      border-radius:10px; box-shadow:0 5px 14px #2139570c; }
-    .executive-cards li:hover,.final-recommendation-cards li:hover { transform:translateY(-1px);
-      box-shadow:0 8px 18px #21395716; }
-    .executive-cards .card-application { background:var(--blue-soft); border-color:#b7d2ef; border-left-color:#3478c9; }
-    .executive-cards .card-decision { background:var(--orange-soft); border-color:#edbd97; border-left-color:#e56b16; }
-    .executive-cards .card-flaws { background:var(--red-soft); border-color:#e3acb5; border-left-color:#b42336; }
-    .executive-cards .card-risk { background:#fff4e8; border-color:#efc4a0; border-left-color:#ef7d20; }
-    .executive-cards .card-developer { background:var(--yellow-soft); border-color:#e1ce7c; border-left-color:#d5a400; }
-    .executive-cards .card-architect { background:var(--purple-soft); border-color:#cab8e7; border-left-color:#7451b9; }
-    .final-recommendation-cards .card-developer { background:var(--yellow-soft); border-color:#e1ce7c;
-      border-left-color:#d5a400; }
-    .final-recommendation-cards .card-architect { background:var(--purple-soft); border-color:#cab8e7;
-      border-left-color:#7451b9; }
-    .final-recommendation-cards .card-exit { background:var(--green-soft); border-color:#acd8bc;
-      border-left-color:#25864b; }
-    .final-recommendation-cards .card-rerun { background:var(--blue-soft); border-color:#b7d2ef;
-      border-left-color:#3478c9; }
-    table { width:100%; margin:17px 0 28px; table-layout:fixed; border-collapse:separate;
-      border-spacing:0; overflow:hidden; border:1px solid var(--line-strong); border-radius:10px;
-      box-shadow:0 5px 16px #243b5a0d; }
-    thead { background:linear-gradient(180deg,#eaf1fb,#dfe9f7); }
-    th { padding:11px 12px; color:#17345f; text-align:left; font-size:.83rem;
-      letter-spacing:.025em; text-transform:uppercase; }
-    th,td { border:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line);
-      vertical-align:top; overflow-wrap:anywhere; }
-    th:last-child,td:last-child { border-right:0; }
-    tbody tr:last-child td { border-bottom:0; }
-    td { padding:10px 12px; background:#fff; }
-    tbody tr:nth-child(even) td { background:#f9fbfd; }
-    tbody tr:hover td { filter:brightness(.985); }
-    tr.finding-blocker td { background:#fff0f2; border-color:#e4a8b1; }
-    tr.finding-high td { background:#fff5ed; border-color:#efc5a5; }
-    tr.finding-medium td { background:#fffbea; border-color:#e8d68f; }
-    tr.finding-low td { background:#eef6ff; border-color:#accbed; }
-    tr.finding-blocker td:first-child { box-shadow:inset 5px 0 #b42336; }
-    tr.finding-high td:first-child { box-shadow:inset 5px 0 #e56b16; }
-    tr.finding-medium td:first-child { box-shadow:inset 5px 0 #d5a400; }
-    tr.finding-low td:first-child { box-shadow:inset 5px 0 #3478c9; }
-    tr.finding-blocker td:nth-child(3) { color:#82162a; background:#ffdce2; font-weight:750; }
-    tr.finding-high td:nth-child(3) { color:#93400b; background:#ffe4d0; font-weight:750; }
-    tr.finding-medium td:nth-child(3) { color:#785b00; background:#fff1b5; font-weight:750; }
-    tr.finding-low td:nth-child(3) { color:#164e8d; background:#dcecff; font-weight:750; }
-    tr.finding-blocker td:first-child a,tr.finding-high td:first-child a,
-    tr.finding-medium td:first-child a,tr.finding-low td:first-child a { display:inline-grid;
-      width:2rem; height:2rem; place-items:center; color:#fff; text-decoration:none; border-radius:999px; }
-    tr.finding-blocker td:first-child a { background:#b42336; }
-    tr.finding-high td:first-child a { background:#d85d0d; }
-    tr.finding-medium td:first-child a { background:#b88b00; }
-    tr.finding-low td:first-child a { background:#3478c9; }
-    tr.status-pass td { background:#edf9f1; border-color:#b9ddc6; }
-    tr.status-fail td { background:#fff0f2; border-color:#e6b3bc; }
-    tr.status-unverified td { background:#f2f4f7; border-color:#c9d0da; }
-    tr.status-pass td:first-child { box-shadow:inset 5px 0 #25864b; }
-    tr.status-fail td:first-child { box-shadow:inset 5px 0 #b42336; }
-    tr.status-unverified td:first-child { box-shadow:inset 5px 0 #6b7f9e; }
-    tr.status-pass td:nth-child(3) { color:#176237; background:#d9f1e2; font-weight:800; }
-    tr.status-fail td:nth-child(3) { color:#82162a; background:#ffdee4; font-weight:800; }
-    tr.status-unverified td:nth-child(3) { color:#344967; background:#e3e8ef; font-weight:800; }
-    tr.readiness-developer td { background:#fff8e8; border-color:#ead49a; }
-    tr.readiness-developer td:first-child { box-shadow:inset 5px 0 #e56b16; }
-    tr.readiness-architect td { background:var(--purple-soft); border-color:#d3c5e9; }
-    tr.readiness-architect td:first-child { box-shadow:inset 5px 0 #7451b9; }
-    tr.readiness-production td { background:var(--red-soft); border-color:#e5b4bc; }
-    tr.readiness-production td:first-child { box-shadow:inset 5px 0 #b42336; }
-    tr.verification-pass td { background:var(--green-soft); border-color:#b8ddc5; }
-    tr.verification-pass td:first-child { box-shadow:inset 5px 0 #25864b; }
-    @media (max-width:900px) { main { margin:0; padding:28px 20px 42px; border:0; border-radius:0; }
-      .executive-cards,.final-recommendation-cards { grid-template-columns:1fr; }
-      table { display:block; overflow-x:auto; } }
-    @media print { body { background:white; font-size:10pt; }
-      main { margin:0; padding:0; border:0; box-shadow:none; max-width:none; }
-      h2,h3,blockquote,table { break-inside:avoid; }
-      .executive-cards li,.final-recommendation-cards li { box-shadow:none; } }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solution Architect Code Review</title>
+    <style>
+        html { scroll-behavior:smooth; }
+        :root {
+            color-scheme:light;
+            --ink:#172033; --muted:#607087; --line:#d7dfeb; --line-strong:#c4cfdf;
+            --surface:#ffffff; --navy:#142b4a; --blue:#2463c7;
+            --blue-soft:#eaf3ff; --green-soft:#eaf8f0; --yellow-soft:#fff8d9;
+            --orange-soft:#fff0e4; --red-soft:#ffecef; --purple-soft:#f3edff;
+            --slate-soft:#eef2f7; --shadow:0 22px 60px #1d315221,0 3px 10px #1d315214;
+        }
+        * { box-sizing:border-box; }
+        body {
+            margin:0; color:var(--ink);
+            background:radial-gradient(circle at 8% 0%,#dce9ff 0,transparent 28rem),
+            radial-gradient(circle at 92% 8%,#eee5ff 0,transparent 25rem),#edf1f7;
+            font:15px/1.62 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        }
+        main { max-width:1500px; margin:34px auto; padding:42px 50px 56px; background:var(--surface);
+            border:1px solid #fff; border-radius:18px; box-shadow:var(--shadow); }
+        h1 { margin:0 0 12px; padding:0 0 18px; color:var(--navy); font-size:2.25rem;
+            line-height:1.15; letter-spacing:-.025em; border-bottom:4px solid transparent;
+            border-image:linear-gradient(90deg,var(--blue),#7652bd 58%,#d9e2ee) 1; }
+        h2 { margin:42px 0 16px; padding:10px 14px; color:var(--navy); font-size:1.34rem;
+            line-height:1.25; letter-spacing:-.01em; background:linear-gradient(90deg,#eef4fc,transparent 82%);
+            border-left:4px solid var(--blue); border-bottom:1px solid var(--line); border-radius:6px 0 0 6px; }
+        h3 { margin:30px 0 15px; padding:13px 16px; color:#263f68; font-size:1.08rem;
+            background:linear-gradient(90deg,#edf2f9,#f8fafe); border:1px solid #dbe3ef;
+            border-left:6px solid #6b7f9e; border-radius:9px; box-shadow:0 3px 10px #233a5b0a; }
+        h3.sev-blocker { background:linear-gradient(90deg,#ffe7eb,#fff6f7); border-color:#e8aab5;
+            border-left-color:#b42336; color:#82162a; }
+        h3.sev-high { background:linear-gradient(90deg,#ffebdc,#fff7f0); border-color:#f0bd96;
+            border-left-color:#e56b16; color:#93400b; }
+        h3.sev-medium { background:linear-gradient(90deg,#fff5c9,#fffbed); border-color:#e6d17c;
+            border-left-color:#d5a400; color:#785b00; }
+        h3.sev-low { background:linear-gradient(90deg,#e5f1ff,#f4f9ff); border-color:#afceed;
+            border-left-color:#3478c9; color:#164e8d; }
+        h3[id^="issue-"] { scroll-margin-top:18px; }
+        p { margin:10px 0; }
+        a { color:#165fb9; font-weight:600; text-decoration-color:#8bb5e2; text-underline-offset:2px; }
+        a:hover { color:#0c4386; text-decoration-thickness:2px; }
+        code { padding:2px 5px; color:#8d2850; background:#eef2f7; border:1px solid #e0e6ef;
+            border-radius:4px; font-size:.91em; }
+        pre { padding:18px 20px; overflow:auto; color:#f4f7fb;
+            background:linear-gradient(145deg,#172033,#223451); border:1px solid #344764;
+            border-radius:10px; box-shadow:0 8px 22px #17203320; }
+        pre.code-diff { border-left:6px solid #25a65a; box-shadow:inset 0 0 0 1px #30405d; }
+        pre code { color:inherit; background:transparent; border:0; padding:0; }
+        li { margin:6px 0; }
+        .meta { display:inline-block; margin:0 0 18px; padding:5px 10px; color:var(--muted);
+            background:#f2f5f9; border:1px solid #e0e6ef; border-radius:999px; font-size:.82rem; }
+        blockquote { margin:18px 0 28px; padding:20px 22px; background:#fff7df;
+            border:1px solid #ecd8a0; border-left:7px solid #e59b13; border-radius:10px;
+            box-shadow:0 8px 22px #2f466512; }
+        blockquote h2 { margin:0 0 12px; padding:0; border:0; color:#8a4b00; background:none; }
+        blockquote p { margin:9px 0; }
+        blockquote.decision-pass { background:var(--green-soft); border-color:#99d1af; border-left-color:#25864b; }
+        blockquote.decision-pass h2 { color:#176237; }
+        blockquote.decision-followup { background:var(--yellow-soft); border-color:#e2ca6f; border-left-color:#d5a400; }
+        blockquote.decision-followup h2 { color:#785b00; }
+        blockquote.decision-changes { background:var(--orange-soft); border-color:#edb487; border-left-color:#e56b16; }
+        blockquote.decision-changes h2 { color:#93400b; }
+        blockquote.decision-blocked { background:var(--red-soft); border-color:#e3a1ad; border-left-color:#b42336; }
+        blockquote.decision-blocked h2 { color:#82162a; }
+        blockquote.decision-evidence { background:var(--slate-soft); border-color:#bdc8d7; border-left-color:#6b7f9e; }
+        blockquote.decision-evidence h2 { color:#344967; }
+        blockquote.decision-readiness { padding:18px; background:linear-gradient(135deg,#f7f9fd,#f0f4fa);
+            border-color:#cbd6e5; border-left-color:var(--navy); }
+        blockquote.decision-readiness h2 { padding:0 4px 12px; color:var(--navy); border-bottom:1px solid #cdd7e5; }
+        blockquote.decision-readiness p { padding:10px 12px; background:#fff; border:1px solid #dde4ee;
+            border-left:5px solid #455a77; border-radius:7px; box-shadow:0 2px 7px #233a5b0a; }
+        blockquote.decision-readiness p:nth-of-type(1) { background:var(--orange-soft); border-color:#efc29f;
+            border-left-color:#e56b16; }
+        blockquote.decision-readiness p:nth-of-type(2) { background:var(--purple-soft); border-color:#cdbce9;
+            border-left-color:#7451b9; }
+        blockquote.decision-readiness p:nth-of-type(3) { background:var(--red-soft); border-color:#e5adb6;
+            border-left-color:#b42336; }
+        blockquote.decision-readiness p:nth-of-type(4) { background:#fff4e8; border-color:#efc6a4;
+            border-left-color:#ef7d20; }
+        blockquote.decision-readiness p:nth-of-type(5) { background:var(--green-soft); border-color:#b0d9bf;
+            border-left-color:#25864b; }
+        .executive-cards,.final-recommendation-cards { display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:0; list-style:none; }
+        .executive-cards li,.final-recommendation-cards li { position:relative; margin:0; padding:17px 18px;
+            background:#f4f7fb; border:1px solid #d8e1ee; border-left:7px solid #5f7ea8;
+            border-radius:10px; box-shadow:0 5px 14px #2139570c; }
+        .executive-cards li:hover,.final-recommendation-cards li:hover { transform:translateY(-1px);
+            box-shadow:0 8px 18px #21395716; }
+        .executive-cards .card-application { background:var(--blue-soft); border-color:#b7d2ef; border-left-color:#3478c9; }
+        .executive-cards .card-decision { background:var(--orange-soft); border-color:#edbd97; border-left-color:#e56b16; }
+        .executive-cards .card-flaws { background:var(--red-soft); border-color:#e3acb5; border-left-color:#b42336; }
+        .executive-cards .card-risk { background:#fff4e8; border-color:#efc4a0; border-left-color:#ef7d20; }
+        .executive-cards .card-developer { background:var(--yellow-soft); border-color:#e1ce7c; border-left-color:#d5a400; }
+        .executive-cards .card-architect { background:var(--purple-soft); border-color:#cab8e7; border-left-color:#7451b9; }
+        .final-recommendation-cards .card-developer { background:var(--yellow-soft); border-color:#e1ce7c;
+            border-left-color:#d5a400; }
+        .final-recommendation-cards .card-architect { background:var(--purple-soft); border-color:#cab8e7;
+            border-left-color:#7451b9; }
+        .final-recommendation-cards .card-exit { background:var(--green-soft); border-color:#acd8bc;
+            border-left-color:#25864b; }
+        .final-recommendation-cards .card-rerun { background:var(--blue-soft); border-color:#b7d2ef;
+            border-left-color:#3478c9; }
+        table { width:100%; margin:17px 0 28px; table-layout:fixed; border-collapse:separate;
+            border-spacing:0; overflow:hidden; border:1px solid var(--line-strong); border-radius:10px;
+            box-shadow:0 5px 16px #243b5a0d; }
+        thead { background:linear-gradient(180deg,#eaf1fb,#dfe9f7); }
+        th { padding:11px 12px; color:#17345f; text-align:left; font-size:.83rem;
+            letter-spacing:.025em; text-transform:uppercase; }
+        th,td { border:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+            vertical-align:top; overflow-wrap:anywhere; }
+        th:last-child,td:last-child { border-right:0; }
+        tbody tr:last-child td { border-bottom:0; }
+        td { padding:10px 12px; background:#fff; }
+        tbody tr:nth-child(even) td { background:#f9fbfd; }
+        tbody tr:hover td { filter:brightness(.985); }
+        tr.finding-blocker td { background:#fff0f2; border-color:#e4a8b1; }
+        tr.finding-high td { background:#fff5ed; border-color:#efc5a5; }
+        tr.finding-medium td { background:#fffbea; border-color:#e8d68f; }
+        tr.finding-low td { background:#eef6ff; border-color:#accbed; }
+        tr.finding-blocker td:first-child { box-shadow:inset 5px 0 #b42336; }
+        tr.finding-high td:first-child { box-shadow:inset 5px 0 #e56b16; }
+        tr.finding-medium td:first-child { box-shadow:inset 5px 0 #d5a400; }
+        tr.finding-low td:first-child { box-shadow:inset 5px 0 #3478c9; }
+        tr.finding-blocker td:nth-child(3) { color:#82162a; background:#ffdce2; font-weight:750; }
+        tr.finding-high td:nth-child(3) { color:#93400b; background:#ffe4d0; font-weight:750; }
+        tr.finding-medium td:nth-child(3) { color:#785b00; background:#fff1b5; font-weight:750; }
+        tr.finding-low td:nth-child(3) { color:#164e8d; background:#dcecff; font-weight:750; }
+        tr.finding-blocker td:first-child a,tr.finding-high td:first-child a,
+        tr.finding-medium td:first-child a,tr.finding-low td:first-child a { display:inline-grid;
+            width:2rem; height:2rem; place-items:center; color:#fff; text-decoration:none; border-radius:999px; }
+        tr.finding-blocker td:first-child a { background:#b42336; }
+        tr.finding-high td:first-child a { background:#d85d0d; }
+        tr.finding-medium td:first-child a { background:#b88b00; }
+        tr.finding-low td:first-child a { background:#3478c9; }
+        tr.status-pass td { background:#edf9f1; border-color:#b9ddc6; }
+        tr.status-fail td { background:#fff0f2; border-color:#e6b3bc; }
+        tr.status-unverified td { background:#f2f4f7; border-color:#c9d0da; }
+        tr.status-pass td:first-child { box-shadow:inset 5px 0 #25864b; }
+        tr.status-fail td:first-child { box-shadow:inset 5px 0 #b42336; }
+        tr.status-unverified td:first-child { box-shadow:inset 5px 0 #6b7f9e; }
+        tr.status-pass td:nth-child(3) { color:#176237; background:#d9f1e2; font-weight:800; }
+        tr.status-fail td:nth-child(3) { color:#82162a; background:#ffdee4; font-weight:800; }
+        tr.status-unverified td:nth-child(3) { color:#344967; background:#e3e8ef; font-weight:800; }
+        tr.readiness-developer td { background:#fff8e8; border-color:#ead49a; }
+        tr.readiness-developer td:first-child { box-shadow:inset 5px 0 #e56b16; }
+        tr.readiness-architect td { background:var(--purple-soft); border-color:#d3c5e9; }
+        tr.readiness-architect td:first-child { box-shadow:inset 5px 0 #7451b9; }
+        tr.readiness-production td { background:var(--red-soft); border-color:#e5b4bc; }
+        tr.readiness-production td:first-child { box-shadow:inset 5px 0 #b42336; }
+        tr.verification-pass td { background:var(--green-soft); border-color:#b8ddc5; }
+        tr.verification-pass td:first-child { box-shadow:inset 5px 0 #25864b; }
+        @media (max-width:900px) { main { margin:0; padding:28px 20px 42px; border:0; border-radius:0; }
+            .executive-cards,.final-recommendation-cards { grid-template-columns:1fr; }
+            table { display:block; overflow-x:auto; } }
+        @media print { body { background:white; font-size:10pt; }
+            main { margin:0; padding:0; border:0; box-shadow:none; max-width:none; }
+            h2,h3,blockquote,table { break-inside:avoid; }
+            .executive-cards li,.final-recommendation-cards li { box-shadow:none; } }
+    </style>
 </head>
 <body><main>
-<div class="meta">Generated from <code>latest.md</code>. The Markdown report is the source of truth.</div>
-<h1>Solution Architect Code Review</h1>
-<h2>Decision</h2>
-<blockquote class="decision-readiness">
-<h2>ENGINEERING READINESS DECISION</h2>
-<p><strong>Developer implementation readiness:</strong> 🟠 CHANGES REQUIRED — eliminate duplicate single-order queries and replace in-memory pagination with database pagination.</p>
-<p><strong>Architect review readiness:</strong> 🟣 READY FOR ARCHITECT DECISION — production identity, role-claim, and durable-database contracts require ownership decisions.</p>
-<p><strong>Production readiness:</strong> 🔴 NOT READY — the production authentication, authorization, and PostgreSQL operating boundaries are not operationally verified.</p>
-<p><strong>Top issue:</strong> <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a> — a mocked decoder proves route wiring but cannot prove that deployed tokens are safely validated.</p>
-<p><strong>Build and tests:</strong> All three launcher-supplied Gradle commands succeeded; 24 tests passed with no failures, and both JaCoCo gates passed.</p>
-</blockquote>
-<h2>Overall engineering assessment</h2>
-<ul class="executive-cards">
-<li class="card-application"><strong>Application:</strong> Java 23 Spring Boot Order Management REST microservice, implemented as one layered, independently deployable service.</li>
-<li class="card-decision"><strong>Readiness:</strong> Developer implementation readiness is <code>CHANGES REQUIRED</code>; the solution is <code>READY FOR ARCHITECT DECISION</code> despite those corrections; production readiness is <code>NOT READY</code>.</li>
-<li class="card-flaws"><strong>Verified findings:</strong> Five <code>FAIL</code> controls: three Medium developer implementation defects and two High architect decisions required. Two High <code>PARTIAL</code> controls require architect decisions. No architectural conformance violation or verified architecture flaw was found.</li>
-<li class="card-risk"><strong>Top risk:</strong> <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a> — issuer, audience, JWKS, signature, rotation, and authentication-failure behavior have not been exercised against signed tokens.</li>
-<li class="card-developer"><strong>Developer action:</strong> Replace full-table list loading with <code>Pageable</code> repository access, reuse the first <code>findById</code> result, and add focused query-count and pagination regression tests.</li>
-<li class="card-architect"><strong>Architect action:</strong> The security architect must own the identity-provider and role-claim contracts; the platform/data architect must own the deployable PostgreSQL, migration, availability, credential, backup, and recovery contract.</li>
-</ul>
-<h2>At a glance</h2>
-<table><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody>
-<tr class=""><td>Current branch</td><td><code>main</code></td></tr>
-<tr class=""><td>Review date</td><td><code>2026-08-12 20:05:15 CDT (-0500)</code></td></tr>
-<tr class=""><td>Review scope</td><td><code>repository</code> — entire current application and repository artifacts; comparison base N/A</td></tr>
-<tr class="readiness-developer"><td>Developer implementation readiness</td><td><code>CHANGES REQUIRED</code> — three Medium failed implementation controls across two root causes</td></tr>
-<tr class="readiness-architect"><td>Architect review readiness</td><td><code>READY FOR ARCHITECT DECISION</code> — three production contracts require architect ownership</td></tr>
-<tr class="readiness-production"><td>Production readiness</td><td><code>NOT READY</code> — unresolved material security and persistence decisions plus verified release-affecting defects</td></tr>
-<tr class="verification-pass"><td>Build and tests</td><td>PASS — clean test, build, and coverage commands succeeded; 24 tests passed, 0 failed</td></tr>
-<tr class=""><td>Test coverage</td><td>Line 97.63% vs 85%; branch 85.71% vs 80%; gate PASS</td></tr>
-<tr class=""><td>Developer fixes</td><td>2</td></tr>
-<tr class=""><td>Architectural conformance violations</td><td>0</td></tr>
-<tr class=""><td>Architect decisions required</td><td>3</td></tr>
-<tr class=""><td>Evidence gaps</td><td>7</td></tr>
-<tr class=""><td>Checks meeting the standard</td><td>25 of 32 verified applicable controls</td></tr>
-<tr class=""><td>Checks needing evidence</td><td>7</td></tr>
-<tr class=""><td>Evidence coverage</td><td>82.05% — good repository-level evidence, with production operating context still absent</td></tr>
-<tr class=""><td>Standards score</td><td>85.33% — verified applicable controls satisfied</td></tr>
-</tbody></table>
-<p>The standards score is not the percentage of source code that is correct, secure, tested, or production-ready.</p>
-<h2>Developer corrections</h2>
-<table><thead><tr><th>#</th><th>Finding</th><th>Category / severity / owner</th><th>Evidence</th><th>Technical impact</th><th>Recommended correction</th></tr></thead><tbody>
-<tr class="finding-medium"><td><a href="#issue-1">1</a></td><td>Duplicate single-order repository lookup</td><td>Code Quality and Maintainability · 🟡 Medium · Developer</td><td><code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:70</code>, <code>findOrder(Long)</code></td><td>Every successful get, update, and delete performs the same database lookup twice.</td><td>Return the entity from the first <code>Optional</code> and verify one <code>findById</code> invocation per operation.</td></tr>
-<tr class="finding-medium"><td><a href="#issue-2">2</a></td><td>Pagination loads the entire order table</td><td>Data and Persistence · 🟡 Medium · Developer</td><td><code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:37</code>, <code>getAll(int,int)</code></td><td>Response size is bounded, but query time and application memory grow with the complete table.</td><td>Use repository-level <code>PageRequest</code> pagination and map the returned <code>Page&lt;Order&gt;</code>.</td></tr>
-</tbody></table>
-<h2>Architectural conformance violations</h2>
-<p>None.</p>
-<h2>Architect decisions required</h2>
-<table><thead><tr><th>#</th><th>Finding</th><th>Category / severity / owner</th><th>Evidence</th><th>Technical impact</th><th>Recommended correction</th></tr></thead><tbody>
-<tr class="finding-high"><td><a href="#issue-3">3</a></td><td>Production role-claim lifecycle is unowned</td><td>Security and Data Protection · 🟠 High · Architect + Developer</td><td><code>SecurityConfig.java:39</code>, <code>jwtAuthenticationConverter()</code>; <code>README.md:302</code></td><td>Route rules exist, but an incompatible or improperly governed <code>roles</code> claim could deny legitimate access or grant unintended order/operations authority.</td><td>Security architect to approve the claim schema, allowed values, provisioning, revocation, and ownership; then verify allow/deny behavior with signed tokens.</td></tr>
-<tr class="finding-high"><td><a href="#issue-4">4</a></td><td>Production JWT trust contract is not verified</td><td>Security and Data Protection · 🟠 High · Architect + Developer</td><td><code>application-prod.properties:6</code>; <code>ProductionSecurityIntegrationTest.java:56</code></td><td>Deployment could accept or reject tokens differently from the mocked tests, leaving authentication behavior unproven.</td><td>Security/platform architect to approve issuer, audience, JWKS, algorithms, rotation, outage, and failure behavior; add signed-token integration verification.</td></tr>
-<tr class="finding-high"><td><a href="#issue-5">5</a></td><td>Durable PostgreSQL operating contract is not evidenced</td><td>Data and Persistence · 🟠 High · Architect + Developer</td><td><code>application-prod.properties:1</code>; <code>build.gradle:30</code>; migration <code>V1__create_customer_orders.sql</code></td><td>Only H2 is exercised, so PostgreSQL migration compatibility, availability, backup, restore, credentials, and recovery ownership remain unproven.</td><td>Platform/data architect to select and own the deployable PostgreSQL service and recovery model; verify Flyway and application behavior against PostgreSQL.</td></tr>
-</tbody></table>
-<h2>Evidence gaps</h2>
-<ul class="">
-<li class="">API compatibility remains unverified because no released schema baseline, consumer contract, or in-scope API change is identified. This does not independently change readiness; a supported consumer contract or versioned API baseline would resolve it.</li>
-<li class="">Deployment topology, replica count, resource limits, shutdown policy, and recovery runbooks are not present. Production evidence would require deployment manifests or an equivalent platform contract.</li>
-<li class="">Personal-data governance for <code>customerName</code> is unknown. A data classification and retention decision would resolve the uncertainty; the field alone does not establish a defect.</li>
-<li class="">Formatting/lint, static analysis, CI, and dependency-vulnerability scanning are not configured or evidenced. These remain <code>UNVERIFIED</code>, while the repository-defined build, tests, and coverage checks passed.</li>
-</ul>
-<h2>Architecture summary</h2>
-<table><thead><tr><th>Area</th><th>Evidence-based summary</th></tr></thead><tbody>
-<tr class=""><td>Purpose and business flow</td><td>A client creates, lists, retrieves, replaces, or deletes orders through <code>/api/orders</code>; the controller validates DTOs, the service owns transactions and version checks, and JPA persists <code>Order</code> entities.</td></tr>
-<tr class=""><td>Components and dependency flow</td><td>One Spring Boot service with <code>order.controller → order.service → order.repository → order.entity</code>; DTOs define HTTP payloads and <code>exception</code> provides cross-cutting error translation. Constructor injection is used.</td></tr>
-<tr class=""><td>Runtime and deployment model</td><td>Java 23, Spring Boot 4.1, Gradle 9.6. The default <code>local</code> profile uses in-memory H2 and Basic authentication; <code>prod</code> declares PostgreSQL and a stateless OAuth 2.0 JWT resource server. No deployment manifest or runtime topology is present.</td></tr>
-<tr class=""><td>APIs and integrations</td><td>Synchronous Spring MVC REST endpoints only. Actuator exposes health/info subject to profile security. No downstream HTTP client, message broker, event producer, cloud service, or other external business integration was observed.</td></tr>
-<tr class=""><td>Data flow and persistence</td><td><code>OrderRequest → OrderService → Order → JpaRepository → customer_orders</code>; responses are mapped to immutable records. Flyway supplies one schema migration; H2 is tested, while PostgreSQL is declared but not exercised.</td></tr>
-<tr class=""><td>Engineering controls</td><td>Gradle compilation/build, JUnit 5/Mockito/MockMvc tests, and JaCoCo gates are configured and passed. No formatter, lint, static-analysis, CI workflow, or dependency-vulnerability scanner is configured.</td></tr>
-</tbody></table>
-<h2>Review scope</h2>
-<ul class="">
-<li class=""><strong>Mode:</strong> Repository review.</li>
-<li class=""><strong>Repository root:</strong> <code>/Users/manjushaguntur/IdeaProjects/SmartCodeReview</code>.</li>
-<li class=""><strong>Current branch:</strong> <code>main</code>.</li>
-<li class=""><strong>Review date:</strong> <code>2026-08-12 20:05:15 CDT (-0500)</code>.</li>
-<li class=""><strong>Comparison base:</strong> N/A — repository review.</li>
-<li class=""><strong>Observed revision:</strong> <code>05c9489ad6a5d57f0600ec1a240bf19a43aac128</code>.</li>
-<li class=""><strong>Included:</strong> Current production Java sources, resource configuration, SQL migration and seed data, Gradle configuration, tests, README, repository standards, review controls, launcher-supplied verification log, test results, and JaCoCo report.</li>
-<li class=""><strong>Excluded:</strong> Generated sample review content was not treated as production implementation evidence. Generated build artifacts were inspected only where they supplied verification evidence.</li>
-<li class=""><strong>Working-tree state:</strong> Modified tracked files were observed in <code>.agents/skills/code-review/SKILL.md</code>, both review references, <code>.agents/skills/code-review/scripts/RenderReport.java</code>, <code>ARTICLE_NOTES.md</code>, and <code>README.md</code>. No files were modified by this review.</li>
-<li class=""><strong>Evidence limitations:</strong> No deployable platform manifest, live identity-provider/JWKS contract, signed-token test, PostgreSQL execution result, backup/restore evidence, static-analysis result, dependency scan, or CI workflow was available. Git emitted sandbox-related temporary-cache warnings, but still returned status and revision data.</li>
-</ul>
-<h2>Category assessment</h2>
-<table><thead><tr><th>Category and importance</th><th>Score / baseline and coverage</th><th>Result</th><th>Architect summary</th></tr></thead><tbody>
-<tr class="status-pass"><td>Architecture and Design · 20%</td><td>100.00% / 85.00% (+15.00); coverage 66.67%</td><td>✅ Meets baseline</td><td>Layering, transaction ownership, and concurrency strategy are coherent; compatibility and physical deployment evidence are unavailable.</td></tr>
-<tr class="status-fail"><td>Code Quality and Maintainability · 15%</td><td>60.00% / 80.00% (-20.00); coverage 83.33%</td><td>❌ Below baseline</td><td>The code is focused and readable, but duplicate lookups and hidden full-table loading contradict efficient maintainability expectations.</td></tr>
-<tr class="status-pass"><td>API and Integration Design · 15%</td><td>100.00% / 85.00% (+15.00); coverage 66.67%</td><td>✅ Meets baseline</td><td>DTO validation, HTTP semantics, ETags, pagination metadata, and documented non-idempotent create behavior are sound.</td></tr>
-<tr class="status-fail"><td>Security and Data Protection · 15%</td><td>70.00% / 85.00% (-15.00); coverage 83.33%</td><td>❌ Below baseline</td><td>Route controls and safe errors exist, but production authentication and the external role lifecycle are not operationally established.</td></tr>
-<tr class="status-pass"><td>Reliability and Operational Readiness · 15%</td><td>100.00% / 85.00% (+15.00); coverage 80.00%</td><td>✅ Meets baseline</td><td>Primary-flow transactions, health groups, correlation IDs, and safe failure translation are evidenced; topology and recovery ownership remain unknown.</td></tr>
-<tr class="status-fail"><td>Data and Persistence · 10%</td><td>66.67% / 85.00% (-18.33); coverage 100.00%</td><td>❌ Below baseline</td><td>Transactions, versioning, mappings, and migration structure are present, but pagination is not pushed to the database and PostgreSQL is unverified.</td></tr>
-<tr class="status-pass"><td>Testing and Verification · 10%</td><td>91.67% / 80.00% (+11.67); coverage 85.71%</td><td>✅ Meets baseline</td><td>Tests and coverage gates pass with broad API coverage; signed-token security behavior remains only partially verified.</td></tr>
-<tr class="status-pass"><td><strong>Overall · 100%</strong></td><td><strong>85.33% / 85.00% (+0.33); coverage 82.05%</strong></td><td><strong>✅ Meets baseline</strong></td><td><strong>The numerical baseline is met, but readiness gates override it: verified implementation defects and unresolved production contracts keep release readiness at <code>NOT READY</code>.</strong></td></tr>
-</tbody></table>
-<h2>Detailed assessment</h2>
-<h3 class="">Architecture and Design</h3>
-<ul class="">
-<li class="">✅ Feature packages and dependencies preserve <code>controller → service → repository → entity</code>, with DTOs at the HTTP boundary. (<code>AD-01</code>)</li>
-<li class="">✅ Controllers translate HTTP while <code>OrderService</code> owns business decisions and persistence orchestration. (<code>AD-02</code>)</li>
-<li class="">✅ The single service and repository abstractions match demonstrated needs without speculative integration layers. (<code>AD-03</code>)</li>
-<li class="">✅ Service-level transactions, <code>@Version</code>, <code>If-Match</code>, and explicit stale-version handling establish state and concurrency ownership. (<code>AD-04</code>)</li>
-<li class="">❓ No released contract baseline, supported consumer commitment, or in-scope contract change exists to verify compatibility behavior. (<code>AD-05</code>)</li>
-<li class="">❓ The repository declares one executable service but provides no deployment topology or scaling evidence for production verification. (<code>AD-06</code>)</li>
-</ul>
-<h3 class="">Code Quality and Maintainability</h3>
-<ul class="">
-<li class="">✅ DTO constraints and error tests cover null, blank, numeric, enum, pagination, and stale-version cases on the principal paths. (<code>QM-01</code>)</li>
-</ul>
-<h3 id="issue-1" class="sev-medium">🟡 1. Duplicate single-order repository lookup</h3>
-<ul class="">
-<li class=""><strong>Control:</strong> <code>QM-02</code> · Code Quality and Maintainability · <code>FAIL</code></li>
-<li class=""><strong>Type / classification / owner:</strong> Developer code flaw · Developer implementation defect · Developer</li>
-<li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:70</code>, <code>findOrder(Long)</code></li>
-<li class=""><strong>Repository evidence:</strong> <code>findOrder</code> calls <code>orderRepository.findById(id)</code> at line 71, checks the result, then calls the identical repository method again at line 75 without intervening state change.</li>
-<li class=""><strong>Failure scenario:</strong> A successful GET, PUT, or DELETE performs two SQL selects for the same order inside one service invocation.</li>
-<li class=""><strong>Technical impact:</strong> Database load and request latency are unnecessarily doubled for every successful single-order operation.</li>
-<li class=""><strong>Recommended correction:</strong> Return the entity held by the first <code>Optional</code> and add verification that each public operation invokes <code>findById</code> once.</li>
-<li class=""><strong>Fix sketch:</strong></li>
-</ul>
-<pre><code>private Order findOrder(Long id) {
+    <div class="meta">Generated from <code>latest.md</code>. The Markdown report is the source of truth.</div>
+    <h1>Solution Architect Code Review</h1>
+    <h2>Decision</h2>
+    <blockquote class="decision-readiness">
+        <h2>ENGINEERING READINESS DECISION</h2>
+        <p><strong>Developer implementation readiness:</strong> 🟠 CHANGES REQUIRED — eliminate duplicate single-order queries and replace in-memory pagination with database pagination.</p>
+        <p><strong>Architect review readiness:</strong> 🟣 READY FOR ARCHITECT DECISION — production identity, role-claim, and durable-database contracts require ownership decisions.</p>
+        <p><strong>Production readiness:</strong> 🔴 NOT READY — the production authentication, authorization, and PostgreSQL operating boundaries are not operationally verified.</p>
+        <p><strong>Top issue:</strong> <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a> — a mocked decoder proves route wiring but cannot prove that deployed tokens are safely validated.</p>
+        <p><strong>Build and tests:</strong> All three launcher-supplied Gradle commands succeeded; 24 tests passed with no failures, and both JaCoCo gates passed.</p>
+    </blockquote>
+    <h2>Overall engineering assessment</h2>
+    <ul class="executive-cards">
+        <li class="card-application"><strong>Application:</strong> Java 23 Spring Boot Order Management REST microservice, implemented as one layered, independently deployable service.</li>
+        <li class="card-decision"><strong>Readiness:</strong> Developer implementation readiness is <code>CHANGES REQUIRED</code>; the solution is <code>READY FOR ARCHITECT DECISION</code> despite those corrections; production readiness is <code>NOT READY</code>.</li>
+        <li class="card-flaws"><strong>Verified findings:</strong> Five <code>FAIL</code> controls: three Medium developer implementation defects and two High architect decisions required. Two High <code>PARTIAL</code> controls require architect decisions. No architectural conformance violation or verified architecture flaw was found.</li>
+        <li class="card-risk"><strong>Top risk:</strong> <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a> — issuer, audience, JWKS, signature, rotation, and authentication-failure behavior have not been exercised against signed tokens.</li>
+        <li class="card-developer"><strong>Developer action:</strong> Replace full-table list loading with <code>Pageable</code> repository access, reuse the first <code>findById</code> result, and add focused query-count and pagination regression tests.</li>
+        <li class="card-architect"><strong>Architect action:</strong> The security architect must own the identity-provider and role-claim contracts; the platform/data architect must own the deployable PostgreSQL, migration, availability, credential, backup, and recovery contract.</li>
+    </ul>
+    <h2>At a glance</h2>
+    <table><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody>
+    <tr class=""><td>Current branch</td><td><code>main</code></td></tr>
+    <tr class=""><td>Review date</td><td><code>2026-08-12 20:05:15 CDT (-0500)</code></td></tr>
+    <tr class=""><td>Review scope</td><td><code>repository</code> — entire current application and repository artifacts; comparison base N/A</td></tr>
+    <tr class="readiness-developer"><td>Developer implementation readiness</td><td><code>CHANGES REQUIRED</code> — three Medium failed implementation controls across two root causes</td></tr>
+    <tr class="readiness-architect"><td>Architect review readiness</td><td><code>READY FOR ARCHITECT DECISION</code> — three production contracts require architect ownership</td></tr>
+    <tr class="readiness-production"><td>Production readiness</td><td><code>NOT READY</code> — unresolved material security and persistence decisions plus verified release-affecting defects</td></tr>
+    <tr class="verification-pass"><td>Build and tests</td><td>PASS — clean test, build, and coverage commands succeeded; 24 tests passed, 0 failed</td></tr>
+    <tr class=""><td>Test coverage</td><td>Line 97.63% vs 85%; branch 85.71% vs 80%; gate PASS</td></tr>
+    <tr class=""><td>Developer fixes</td><td>2</td></tr>
+    <tr class=""><td>Architectural conformance violations</td><td>0</td></tr>
+    <tr class=""><td>Architect decisions required</td><td>3</td></tr>
+    <tr class=""><td>Evidence gaps</td><td>7</td></tr>
+    <tr class=""><td>Checks meeting the standard</td><td>25 of 32 verified applicable controls</td></tr>
+    <tr class=""><td>Checks needing evidence</td><td>7</td></tr>
+    <tr class=""><td>Evidence coverage</td><td>82.05% — good repository-level evidence, with production operating context still absent</td></tr>
+    <tr class=""><td>Standards score</td><td>85.33% — verified applicable controls satisfied</td></tr>
+    </tbody></table>
+    <p>The standards score is not the percentage of source code that is correct, secure, tested, or production-ready.</p>
+    <h2>Developer corrections</h2>
+    <table><thead><tr><th>#</th><th>Finding</th><th>Category / severity / owner</th><th>Evidence</th><th>Technical impact</th><th>Recommended correction</th></tr></thead><tbody>
+    <tr class="finding-medium"><td><a href="#issue-1">1</a></td><td>Duplicate single-order repository lookup</td><td>Code Quality and Maintainability · 🟡 Medium · Developer</td><td><code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:70</code>, <code>findOrder(Long)</code></td><td>Every successful get, update, and delete performs the same database lookup twice.</td><td>Return the entity from the first <code>Optional</code> and verify one <code>findById</code> invocation per operation.</td></tr>
+    <tr class="finding-medium"><td><a href="#issue-2">2</a></td><td>Pagination loads the entire order table</td><td>Data and Persistence · 🟡 Medium · Developer</td><td><code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:37</code>, <code>getAll(int,int)</code></td><td>Response size is bounded, but query time and application memory grow with the complete table.</td><td>Use repository-level <code>PageRequest</code> pagination and map the returned <code>Page&lt;Order&gt;</code>.</td></tr>
+    </tbody></table>
+    <h2>Architectural conformance violations</h2>
+    <p>None.</p>
+    <h2>Architect decisions required</h2>
+    <table><thead><tr><th>#</th><th>Finding</th><th>Category / severity / owner</th><th>Evidence</th><th>Technical impact</th><th>Recommended correction</th></tr></thead><tbody>
+    <tr class="finding-high"><td><a href="#issue-3">3</a></td><td>Production role-claim lifecycle is unowned</td><td>Security and Data Protection · 🟠 High · Architect + Developer</td><td><code>SecurityConfig.java:39</code>, <code>jwtAuthenticationConverter()</code>; <code>README.md:302</code></td><td>Route rules exist, but an incompatible or improperly governed <code>roles</code> claim could deny legitimate access or grant unintended order/operations authority.</td><td>Security architect to approve the claim schema, allowed values, provisioning, revocation, and ownership; then verify allow/deny behavior with signed tokens.</td></tr>
+    <tr class="finding-high"><td><a href="#issue-4">4</a></td><td>Production JWT trust contract is not verified</td><td>Security and Data Protection · 🟠 High · Architect + Developer</td><td><code>application-prod.properties:6</code>; <code>ProductionSecurityIntegrationTest.java:56</code></td><td>Deployment could accept or reject tokens differently from the mocked tests, leaving authentication behavior unproven.</td><td>Security/platform architect to approve issuer, audience, JWKS, algorithms, rotation, outage, and failure behavior; add signed-token integration verification.</td></tr>
+    <tr class="finding-high"><td><a href="#issue-5">5</a></td><td>Durable PostgreSQL operating contract is not evidenced</td><td>Data and Persistence · 🟠 High · Architect + Developer</td><td><code>application-prod.properties:1</code>; <code>build.gradle:30</code>; migration <code>V1__create_customer_orders.sql</code></td><td>Only H2 is exercised, so PostgreSQL migration compatibility, availability, backup, restore, credentials, and recovery ownership remain unproven.</td><td>Platform/data architect to select and own the deployable PostgreSQL service and recovery model; verify Flyway and application behavior against PostgreSQL.</td></tr>
+    </tbody></table>
+    <h2>Evidence gaps</h2>
+    <ul class="">
+        <li class="">API compatibility remains unverified because no released schema baseline, consumer contract, or in-scope API change is identified. This does not independently change readiness; a supported consumer contract or versioned API baseline would resolve it.</li>
+        <li class="">Deployment topology, replica count, resource limits, shutdown policy, and recovery runbooks are not present. Production evidence would require deployment manifests or an equivalent platform contract.</li>
+        <li class="">Personal-data governance for <code>customerName</code> is unknown. A data classification and retention decision would resolve the uncertainty; the field alone does not establish a defect.</li>
+        <li class="">Formatting/lint, static analysis, CI, and dependency-vulnerability scanning are not configured or evidenced. These remain <code>UNVERIFIED</code>, while the repository-defined build, tests, and coverage checks passed.</li>
+    </ul>
+    <h2>Architecture summary</h2>
+    <table><thead><tr><th>Area</th><th>Evidence-based summary</th></tr></thead><tbody>
+    <tr class=""><td>Purpose and business flow</td><td>A client creates, lists, retrieves, replaces, or deletes orders through <code>/api/orders</code>; the controller validates DTOs, the service owns transactions and version checks, and JPA persists <code>Order</code> entities.</td></tr>
+    <tr class=""><td>Components and dependency flow</td><td>One Spring Boot service with <code>order.controller → order.service → order.repository → order.entity</code>; DTOs define HTTP payloads and <code>exception</code> provides cross-cutting error translation. Constructor injection is used.</td></tr>
+    <tr class=""><td>Runtime and deployment model</td><td>Java 23, Spring Boot 4.1, Gradle 9.6. The default <code>local</code> profile uses in-memory H2 and Basic authentication; <code>prod</code> declares PostgreSQL and a stateless OAuth 2.0 JWT resource server. No deployment manifest or runtime topology is present.</td></tr>
+    <tr class=""><td>APIs and integrations</td><td>Synchronous Spring MVC REST endpoints only. Actuator exposes health/info subject to profile security. No downstream HTTP client, message broker, event producer, cloud service, or other external business integration was observed.</td></tr>
+    <tr class=""><td>Data flow and persistence</td><td><code>OrderRequest → OrderService → Order → JpaRepository → customer_orders</code>; responses are mapped to immutable records. Flyway supplies one schema migration; H2 is tested, while PostgreSQL is declared but not exercised.</td></tr>
+    <tr class=""><td>Engineering controls</td><td>Gradle compilation/build, JUnit 5/Mockito/MockMvc tests, and JaCoCo gates are configured and passed. No formatter, lint, static-analysis, CI workflow, or dependency-vulnerability scanner is configured.</td></tr>
+    </tbody></table>
+    <h2>Review scope</h2>
+    <ul class="">
+        <li class=""><strong>Mode:</strong> Repository review.</li>
+        <li class=""><strong>Repository root:</strong> <code>/Users/manjushaguntur/IdeaProjects/SmartCodeReview</code>.</li>
+        <li class=""><strong>Current branch:</strong> <code>main</code>.</li>
+        <li class=""><strong>Review date:</strong> <code>2026-08-12 20:05:15 CDT (-0500)</code>.</li>
+        <li class=""><strong>Comparison base:</strong> N/A — repository review.</li>
+        <li class=""><strong>Observed revision:</strong> <code>05c9489ad6a5d57f0600ec1a240bf19a43aac128</code>.</li>
+        <li class=""><strong>Included:</strong> Current production Java sources, resource configuration, SQL migration and seed data, Gradle configuration, tests, README, repository standards, review controls, launcher-supplied verification log, test results, and JaCoCo report.</li>
+        <li class=""><strong>Excluded:</strong> Generated sample review content was not treated as production implementation evidence. Generated build artifacts were inspected only where they supplied verification evidence.</li>
+        <li class=""><strong>Working-tree state:</strong> Modified tracked files were observed in <code>.agents/skills/code-review/SKILL.md</code>, both review references, <code>.agents/skills/code-review/scripts/RenderReport.java</code>, <code>ARTICLE_NOTES.md</code>, and <code>README.md</code>. No files were modified by this review.</li>
+        <li class=""><strong>Evidence limitations:</strong> No deployable platform manifest, live identity-provider/JWKS contract, signed-token test, PostgreSQL execution result, backup/restore evidence, static-analysis result, dependency scan, or CI workflow was available. Git emitted sandbox-related temporary-cache warnings, but still returned status and revision data.</li>
+    </ul>
+    <h2>Category assessment</h2>
+    <table><thead><tr><th>Category and importance</th><th>Score / baseline and coverage</th><th>Result</th><th>Architect summary</th></tr></thead><tbody>
+    <tr class="status-pass"><td>Architecture and Design · 20%</td><td>100.00% / 85.00% (+15.00); coverage 66.67%</td><td>✅ Meets baseline</td><td>Layering, transaction ownership, and concurrency strategy are coherent; compatibility and physical deployment evidence are unavailable.</td></tr>
+    <tr class="status-fail"><td>Code Quality and Maintainability · 15%</td><td>60.00% / 80.00% (-20.00); coverage 83.33%</td><td>❌ Below baseline</td><td>The code is focused and readable, but duplicate lookups and hidden full-table loading contradict efficient maintainability expectations.</td></tr>
+    <tr class="status-pass"><td>API and Integration Design · 15%</td><td>100.00% / 85.00% (+15.00); coverage 66.67%</td><td>✅ Meets baseline</td><td>DTO validation, HTTP semantics, ETags, pagination metadata, and documented non-idempotent create behavior are sound.</td></tr>
+    <tr class="status-fail"><td>Security and Data Protection · 15%</td><td>70.00% / 85.00% (-15.00); coverage 83.33%</td><td>❌ Below baseline</td><td>Route controls and safe errors exist, but production authentication and the external role lifecycle are not operationally established.</td></tr>
+    <tr class="status-pass"><td>Reliability and Operational Readiness · 15%</td><td>100.00% / 85.00% (+15.00); coverage 80.00%</td><td>✅ Meets baseline</td><td>Primary-flow transactions, health groups, correlation IDs, and safe failure translation are evidenced; topology and recovery ownership remain unknown.</td></tr>
+    <tr class="status-fail"><td>Data and Persistence · 10%</td><td>66.67% / 85.00% (-18.33); coverage 100.00%</td><td>❌ Below baseline</td><td>Transactions, versioning, mappings, and migration structure are present, but pagination is not pushed to the database and PostgreSQL is unverified.</td></tr>
+    <tr class="status-pass"><td>Testing and Verification · 10%</td><td>91.67% / 80.00% (+11.67); coverage 85.71%</td><td>✅ Meets baseline</td><td>Tests and coverage gates pass with broad API coverage; signed-token security behavior remains only partially verified.</td></tr>
+    <tr class="status-pass"><td><strong>Overall · 100%</strong></td><td><strong>85.33% / 85.00% (+0.33); coverage 82.05%</strong></td><td><strong>✅ Meets baseline</strong></td><td><strong>The numerical baseline is met, but readiness gates override it: verified implementation defects and unresolved production contracts keep release readiness at <code>NOT READY</code>.</strong></td></tr>
+    </tbody></table>
+    <h2>Detailed assessment</h2>
+    <h3 class="">Architecture and Design</h3>
+    <ul class="">
+        <li class="">✅ Feature packages and dependencies preserve <code>controller → service → repository → entity</code>, with DTOs at the HTTP boundary. (<code>AD-01</code>)</li>
+        <li class="">✅ Controllers translate HTTP while <code>OrderService</code> owns business decisions and persistence orchestration. (<code>AD-02</code>)</li>
+        <li class="">✅ The single service and repository abstractions match demonstrated needs without speculative integration layers. (<code>AD-03</code>)</li>
+        <li class="">✅ Service-level transactions, <code>@Version</code>, <code>If-Match</code>, and explicit stale-version handling establish state and concurrency ownership. (<code>AD-04</code>)</li>
+        <li class="">❓ No released contract baseline, supported consumer commitment, or in-scope contract change exists to verify compatibility behavior. (<code>AD-05</code>)</li>
+        <li class="">❓ The repository declares one executable service but provides no deployment topology or scaling evidence for production verification. (<code>AD-06</code>)</li>
+    </ul>
+    <h3 class="">Code Quality and Maintainability</h3>
+    <ul class="">
+        <li class="">✅ DTO constraints and error tests cover null, blank, numeric, enum, pagination, and stale-version cases on the principal paths. (<code>QM-01</code>)</li>
+    </ul>
+    <h3 id="issue-1" class="sev-medium">🟡 1. Duplicate single-order repository lookup</h3>
+    <ul class="">
+        <li class=""><strong>Control:</strong> <code>QM-02</code> · Code Quality and Maintainability · <code>FAIL</code></li>
+        <li class=""><strong>Type / classification / owner:</strong> Developer code flaw · Developer implementation defect · Developer</li>
+        <li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:70</code>, <code>findOrder(Long)</code></li>
+        <li class=""><strong>Repository evidence:</strong> <code>findOrder</code> calls <code>orderRepository.findById(id)</code> at line 71, checks the result, then calls the identical repository method again at line 75 without intervening state change.</li>
+        <li class=""><strong>Failure scenario:</strong> A successful GET, PUT, or DELETE performs two SQL selects for the same order inside one service invocation.</li>
+        <li class=""><strong>Technical impact:</strong> Database load and request latency are unnecessarily doubled for every successful single-order operation.</li>
+        <li class=""><strong>Recommended correction:</strong> Return the entity held by the first <code>Optional</code> and add verification that each public operation invokes <code>findById</code> once.</li>
+        <li class=""><strong>Fix sketch:</strong></li>
+    </ul>
+    <pre><code>private Order findOrder(Long id) {
     return orderRepository.findById(id)
         .orElseThrow(() -&gt; new OrderNotFoundException(id));
 }
 // verify(repository, times(1)).findById(id)
 </code></pre>
-<ul class="">
-<li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*OrderServiceTest'</code>; focused get, update, and delete tests should each verify exactly one <code>findById</code> call.</li>
-<li class=""><strong>Confidence:</strong> High</li>
-</ul>
-<ul class="">
-<li class="">✅ Spring MVC blocking behavior, transaction scope, exception translation, and MDC cleanup are lifecycle-safe for the observed execution model. (<code>QM-03</code>)</li>
-</ul>
-<h3 id="issue-2" class="sev-medium">🟡 2. Pagination loads the entire order table</h3>
-<ul class="">
-<li class=""><strong>Control:</strong> <code>QM-04</code> · Code Quality and Maintainability · <code>FAIL</code></li>
-<li class=""><strong>Type / classification / owner:</strong> Developer code flaw · Developer implementation defect · Developer</li>
-<li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:37</code>, <code>getAll(int,int)</code></li>
-<li class=""><strong>Repository evidence:</strong> <code>getAll</code> invokes <code>findAll(Sort)</code>, materializes every order, and only then applies stream <code>skip</code> and <code>limit</code>.</li>
-<li class=""><strong>Failure scenario:</strong> Requesting a 20-item page from a large table loads every matching row and entity into application memory before discarding all but 20.</li>
-<li class=""><strong>Technical impact:</strong> Query latency, heap usage, and garbage collection grow with total table size rather than requested page size.</li>
-<li class=""><strong>Recommended correction:</strong> Pass a sorted <code>PageRequest</code> to <code>JpaRepository.findAll(Pageable)</code> and map the returned page through the existing <code>PageResponse.from</code>.</li>
-<li class=""><strong>Fix sketch:</strong></li>
-</ul>
-<pre><code>var pageable = PageRequest.of(page, size, Sort.by(&quot;id&quot;).ascending());
+    <ul class="">
+        <li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*OrderServiceTest'</code>; focused get, update, and delete tests should each verify exactly one <code>findById</code> call.</li>
+        <li class=""><strong>Confidence:</strong> High</li>
+    </ul>
+    <ul class="">
+        <li class="">✅ Spring MVC blocking behavior, transaction scope, exception translation, and MDC cleanup are lifecycle-safe for the observed execution model. (<code>QM-03</code>)</li>
+    </ul>
+    <h3 id="issue-2" class="sev-medium">🟡 2. Pagination loads the entire order table</h3>
+    <ul class="">
+        <li class=""><strong>Control:</strong> <code>QM-04</code> · Code Quality and Maintainability · <code>FAIL</code></li>
+        <li class=""><strong>Type / classification / owner:</strong> Developer code flaw · Developer implementation defect · Developer</li>
+        <li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/order/service/OrderService.java:37</code>, <code>getAll(int,int)</code></li>
+        <li class=""><strong>Repository evidence:</strong> <code>getAll</code> invokes <code>findAll(Sort)</code>, materializes every order, and only then applies stream <code>skip</code> and <code>limit</code>.</li>
+        <li class=""><strong>Failure scenario:</strong> Requesting a 20-item page from a large table loads every matching row and entity into application memory before discarding all but 20.</li>
+        <li class=""><strong>Technical impact:</strong> Query latency, heap usage, and garbage collection grow with total table size rather than requested page size.</li>
+        <li class=""><strong>Recommended correction:</strong> Pass a sorted <code>PageRequest</code> to <code>JpaRepository.findAll(Pageable)</code> and map the returned page through the existing <code>PageResponse.from</code>.</li>
+        <li class=""><strong>Fix sketch:</strong></li>
+    </ul>
+    <pre><code>var pageable = PageRequest.of(page, size, Sort.by(&quot;id&quot;).ascending());
 var result = orderRepository.findAll(pageable)
     .map(OrderResponse::from);
 return PageResponse.from(result);
 </code></pre>
-<ul class="">
-<li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*OrderServiceTest' --tests '*OrderApiIntegrationTest'</code>; verify <code>findAll(Pageable)</code> receives page, size, and ascending ID order and that response metadata remains correct.</li>
-<li class=""><strong>Confidence:</strong> High</li>
-</ul>
-<ul class="">
-<li class="">✅ Java 23 toolchains, the Gradle wrapper, Spring dependency management, profile separation, and README commands support reproducible development. (<code>QM-05</code>)</li>
-<li class="">❓ No repository formatting or lint capability is configured. (<code>QM-06</code>)</li>
-</ul>
-<h3 class="">API and Integration Design</h3>
-<ul class="">
-<li class="">✅ <code>/api/orders</code> uses validated DTOs, documented HTTP status semantics, ETags, bounded page parameters, and stable <code>ApiError</code> responses. (<code>AI-01</code>)</li>
-<li class="">❓ No changed public contract or established consumer baseline exists to verify compatibility and schema-evolution behavior. (<code>AI-02</code>)</li>
-<li class="">✅ The list contract exposes page/size validation, deterministic ID ordering, and response metadata; create is explicitly documented as non-idempotent, while update/delete use <code>If-Match</code>. (<code>AI-03</code>)</li>
-<li class="">➖ No downstream HTTP/RPC client exists in scope. (<code>AI-04</code>)</li>
-<li class="">➖ No messaging integration exists in scope. (<code>AI-05</code>)</li>
-<li class="">➖ The business flow writes through one JPA transaction and contains no cross-system or messaging dual write. (<code>AI-06</code>)</li>
-</ul>
-<h3 class="">Security and Data Protection</h3>
-<h3 id="issue-3" class="sev-high">🟠 3. Production role-claim lifecycle is unowned</h3>
-<ul class="">
-<li class=""><strong>Control:</strong> <code>SD-01</code> · Security and Data Protection · <code>PARTIAL</code></li>
-<li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
-<li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/config/SecurityConfig.java:39</code>, <code>jwtAuthenticationConverter()</code>; <code>README.md:302</code></li>
-<li class=""><strong>Available evidence:</strong> Production routes require <code>ORDER_READER</code>, <code>ORDER_ADMIN</code>, and <code>OPERATIONS</code>; the converter reads a <code>roles</code> claim, and mocked-token tests verify the route matrix.</li>
-<li class=""><strong>Decision required:</strong> Define the authoritative external claim schema, allowed role values, subject/role provisioning, revocation, change control, and lifecycle ownership.</li>
-<li class=""><strong>Risk:</strong> An identity-provider mapping mismatch or unmanaged role assignment could cause unintended authorization or production denial of access.</li>
-<li class=""><strong>Recommended option:</strong> Use one namespaced, documented roles claim with an explicit allow-list and identity-governance ownership for assignment and revocation.</li>
-<li class=""><strong>Tradeoff:</strong> Centralized governance adds coordination and integration testing but prevents application-local role semantics from drifting from the identity provider.</li>
-<li class=""><strong>Required owner:</strong> Security architect with identity-platform owner; application developer implements the approved mapping and tests.</li>
-<li class=""><strong>Implementation sketch:</strong></li>
-</ul>
-<pre><code>claim: roles
+    <ul class="">
+        <li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*OrderServiceTest' --tests '*OrderApiIntegrationTest'</code>; verify <code>findAll(Pageable)</code> receives page, size, and ascending ID order and that response metadata remains correct.</li>
+        <li class=""><strong>Confidence:</strong> High</li>
+    </ul>
+    <ul class="">
+        <li class="">✅ Java 23 toolchains, the Gradle wrapper, Spring dependency management, profile separation, and README commands support reproducible development. (<code>QM-05</code>)</li>
+        <li class="">❓ No repository formatting or lint capability is configured. (<code>QM-06</code>)</li>
+    </ul>
+    <h3 class="">API and Integration Design</h3>
+    <ul class="">
+        <li class="">✅ <code>/api/orders</code> uses validated DTOs, documented HTTP status semantics, ETags, bounded page parameters, and stable <code>ApiError</code> responses. (<code>AI-01</code>)</li>
+        <li class="">❓ No changed public contract or established consumer baseline exists to verify compatibility and schema-evolution behavior. (<code>AI-02</code>)</li>
+        <li class="">✅ The list contract exposes page/size validation, deterministic ID ordering, and response metadata; create is explicitly documented as non-idempotent, while update/delete use <code>If-Match</code>. (<code>AI-03</code>)</li>
+        <li class="">➖ No downstream HTTP/RPC client exists in scope. (<code>AI-04</code>)</li>
+        <li class="">➖ No messaging integration exists in scope. (<code>AI-05</code>)</li>
+        <li class="">➖ The business flow writes through one JPA transaction and contains no cross-system or messaging dual write. (<code>AI-06</code>)</li>
+    </ul>
+    <h3 class="">Security and Data Protection</h3>
+    <h3 id="issue-3" class="sev-high">🟠 3. Production role-claim lifecycle is unowned</h3>
+    <ul class="">
+        <li class=""><strong>Control:</strong> <code>SD-01</code> · Security and Data Protection · <code>PARTIAL</code></li>
+        <li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
+        <li class=""><strong>Location:</strong> <code>src/main/java/com/manjusha/smartcodereview/config/SecurityConfig.java:39</code>, <code>jwtAuthenticationConverter()</code>; <code>README.md:302</code></li>
+        <li class=""><strong>Available evidence:</strong> Production routes require <code>ORDER_READER</code>, <code>ORDER_ADMIN</code>, and <code>OPERATIONS</code>; the converter reads a <code>roles</code> claim, and mocked-token tests verify the route matrix.</li>
+        <li class=""><strong>Decision required:</strong> Define the authoritative external claim schema, allowed role values, subject/role provisioning, revocation, change control, and lifecycle ownership.</li>
+        <li class=""><strong>Risk:</strong> An identity-provider mapping mismatch or unmanaged role assignment could cause unintended authorization or production denial of access.</li>
+        <li class=""><strong>Recommended option:</strong> Use one namespaced, documented roles claim with an explicit allow-list and identity-governance ownership for assignment and revocation.</li>
+        <li class=""><strong>Tradeoff:</strong> Centralized governance adds coordination and integration testing but prevents application-local role semantics from drifting from the identity provider.</li>
+        <li class=""><strong>Required owner:</strong> Security architect with identity-platform owner; application developer implements the approved mapping and tests.</li>
+        <li class=""><strong>Implementation sketch:</strong></li>
+    </ul>
+    <pre><code>claim: roles
 allowed: ORDER_READER | ORDER_ADMIN | OPERATIONS
 provisioning/revocation owner: identity platform
 application mapping: exact allow-list → ROLE_&lt;value&gt;
 verification: signed allow/deny/revocation scenarios
 </code></pre>
-<ul class="">
-<li class=""><strong>Verification:</strong> Run an approved signed-token suite, for example <code>./gradlew test --tests '*ProductionIdentityProviderIntegrationTest'</code>, proving each allowed role, unknown-role denial, missing-claim denial, and revoked-user denial.</li>
-<li class=""><strong>Confidence:</strong> High</li>
-</ul>
-<ul class="">
-<li class="">✅ Request bodies, enum values, numeric limits, page parameters, headers, and path-bound numeric IDs are constrained; no reachable dynamic SQL, path traversal, unsafe deserialization, or SSRF sink was observed. (<code>SD-02</code>)</li>
-</ul>
-<h3 id="issue-4" class="sev-high">🟠 4. Production JWT trust contract is not verified</h3>
-<ul class="">
-<li class=""><strong>Control:</strong> <code>SD-03</code> · Security and Data Protection · <code>FAIL</code></li>
-<li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
-<li class=""><strong>Location:</strong> <code>src/main/resources/application-prod.properties:6</code>; <code>src/test/java/com/manjusha/smartcodereview/ProductionSecurityIntegrationTest.java:56</code></li>
-<li class=""><strong>Available evidence:</strong> Production configuration declares issuer and audience properties, but the production security test replaces <code>JwtDecoder</code> with a Mockito bean and supplies unsigned in-memory JWT objects.</li>
-<li class=""><strong>Decision required:</strong> Approve the production issuer, audience, discovery/JWKS endpoint, accepted algorithms, key rotation, clock tolerance, JWKS outage behavior, and invalid-token response contract.</li>
-<li class=""><strong>Risk:</strong> The deployed decoder and identity provider may disagree on signatures, claims, algorithms, or rotation behavior even though mocked route tests pass.</li>
-<li class=""><strong>Recommended option:</strong> Use Spring issuer discovery with an explicitly approved audience and algorithm policy, backed by a controlled signed-token/JWKS integration test.</li>
-<li class=""><strong>Tradeoff:</strong> Exercising real cryptographic validation adds test infrastructure and identity-platform coordination but verifies the actual trust boundary.</li>
-<li class=""><strong>Required owner:</strong> Security/platform architect and identity-provider owner; application developer adds integration evidence.</li>
-<li class=""><strong>Implementation sketch:</strong></li>
-</ul>
-<pre><code>spring.security.oauth2.resourceserver.jwt.issuer-uri=${OIDC_ISSUER_URI}
+    <ul class="">
+        <li class=""><strong>Verification:</strong> Run an approved signed-token suite, for example <code>./gradlew test --tests '*ProductionIdentityProviderIntegrationTest'</code>, proving each allowed role, unknown-role denial, missing-claim denial, and revoked-user denial.</li>
+        <li class=""><strong>Confidence:</strong> High</li>
+    </ul>
+    <ul class="">
+        <li class="">✅ Request bodies, enum values, numeric limits, page parameters, headers, and path-bound numeric IDs are constrained; no reachable dynamic SQL, path traversal, unsafe deserialization, or SSRF sink was observed. (<code>SD-02</code>)</li>
+    </ul>
+    <h3 id="issue-4" class="sev-high">🟠 4. Production JWT trust contract is not verified</h3>
+    <ul class="">
+        <li class=""><strong>Control:</strong> <code>SD-03</code> · Security and Data Protection · <code>FAIL</code></li>
+        <li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
+        <li class=""><strong>Location:</strong> <code>src/main/resources/application-prod.properties:6</code>; <code>src/test/java/com/manjusha/smartcodereview/ProductionSecurityIntegrationTest.java:56</code></li>
+        <li class=""><strong>Available evidence:</strong> Production configuration declares issuer and audience properties, but the production security test replaces <code>JwtDecoder</code> with a Mockito bean and supplies unsigned in-memory JWT objects.</li>
+        <li class=""><strong>Decision required:</strong> Approve the production issuer, audience, discovery/JWKS endpoint, accepted algorithms, key rotation, clock tolerance, JWKS outage behavior, and invalid-token response contract.</li>
+        <li class=""><strong>Risk:</strong> The deployed decoder and identity provider may disagree on signatures, claims, algorithms, or rotation behavior even though mocked route tests pass.</li>
+        <li class=""><strong>Recommended option:</strong> Use Spring issuer discovery with an explicitly approved audience and algorithm policy, backed by a controlled signed-token/JWKS integration test.</li>
+        <li class=""><strong>Tradeoff:</strong> Exercising real cryptographic validation adds test infrastructure and identity-platform coordination but verifies the actual trust boundary.</li>
+        <li class=""><strong>Required owner:</strong> Security/platform architect and identity-provider owner; application developer adds integration evidence.</li>
+        <li class=""><strong>Implementation sketch:</strong></li>
+    </ul>
+    <pre><code>spring.security.oauth2.resourceserver.jwt.issuer-uri=${OIDC_ISSUER_URI}
 spring.security.oauth2.resourceserver.jwt.audiences=${OIDC_AUDIENCE}
 # Platform contract owns JWKS availability and rotation.
 # Test issuer serves signed valid, expired, wrong-audience,
 # unknown-key, and rotated-key tokens.
 </code></pre>
-<ul class="">
-<li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*ProductionIdentityProviderIntegrationTest'</code> against the approved test issuer and require deterministic 2xx/401/403 behavior for valid and invalid signed tokens.</li>
-<li class=""><strong>Confidence:</strong> High</li>
-</ul>
-<ul class="">
-<li class="">✅ DTOs are intentional, unexpected errors return generic client-safe messages, and correlation IDs are sanitized before logging context use. (<code>SD-04</code>)</li>
-<li class="">❓ No data-classification, retention, deletion, residency, or audit policy establishes additional requirements for <code>customerName</code>. (<code>SD-05</code>)</li>
-<li class="">✅ Local-only H2/Basic facilities are profile-scoped, production disables the H2 console, management routes are restricted, and security failures use Spring Security behavior. (<code>SD-06</code>)</li>
-</ul>
-<h3 class="">Reliability and Operational Readiness</h3>
-<ul class="">
-<li class="">➖ No downstream client exists for timeout, retry, backoff, cancellation, or retry-storm assessment. (<code>RO-01</code>)</li>
-<li class="">✅ Writes are transactional, create retry behavior is documented, and update/delete protect against stale state with ETags and optimistic versioning. (<code>RO-02</code>)</li>
-<li class="">✅ Observed servlet, JPA, datasource, and MDC resources use framework-managed lifecycles; no custom thread, queue, executor, or unmanaged connection path exists. (<code>RO-03</code>)</li>
-<li class="">✅ Production configuration enables liveness/readiness probes and includes database health in readiness while keeping management exposure bounded. (<code>RO-04</code>)</li>
-<li class="">✅ The correlation filter propagates or generates a safe identifier, clears MDC in <code>finally</code>, and unexpected exceptions are logged once with stack trace. (<code>RO-05</code>)</li>
-<li class="">❓ Deployment recovery procedures, rollback ownership, and production incident runbooks are not present. (<code>RO-06</code>)</li>
-</ul>
-<h3 class="">Data and Persistence</h3>
-<ul class="">
-<li class="">✅ Controllers exchange DTOs, Open Session in View is disabled, service methods perform mapping within transactions, and entities do not cross the HTTP boundary. (<code>DP-01</code>)</li>
-<li class="">🟡 Database query efficiency is covered by <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a>. (<code>DP-02</code> · <code>FAIL</code>)</li>
-<li class="">✅ Service-level read-only/write transactions and explicit persistence/conflict translation preserve operation atomicity. (<code>DP-03</code>)</li>
-<li class="">✅ <code>@Version</code>, <code>If-Match</code>, stale-version responses, and optimistic-lock exception handling provide an explicit lost-update strategy. (<code>DP-04</code>)</li>
-</ul>
-<h3 id="issue-5" class="sev-high">🟠 5. Durable PostgreSQL operating contract is not evidenced</h3>
-<ul class="">
-<li class=""><strong>Control:</strong> <code>DP-05</code> · Data and Persistence · <code>FAIL</code></li>
-<li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
-<li class=""><strong>Location:</strong> <code>src/main/resources/application-prod.properties:1</code>; <code>build.gradle:30</code>; new deployment evidence expected under the platform-owned deployment configuration</li>
-<li class=""><strong>Available evidence:</strong> PostgreSQL drivers, environment placeholders, and a Flyway migration exist, but all generated test evidence uses H2, including the test running under the <code>prod</code> profile.</li>
-<li class=""><strong>Decision required:</strong> Select the deployable PostgreSQL service and define credential delivery, availability, migration ownership, backup, restore, point-in-time recovery, monitoring, and recovery objectives.</li>
-<li class=""><strong>Risk:</strong> PostgreSQL-specific schema behavior or deployment configuration may fail at startup, and durable recovery cannot be assessed from H2 execution.</li>
-<li class=""><strong>Recommended option:</strong> Use a managed PostgreSQL binding with platform secret injection, Flyway-at-deploy/startup ownership, automated backups, restore drills, and PostgreSQL integration tests.</li>
-<li class=""><strong>Tradeoff:</strong> Target-engine testing and managed recovery add infrastructure cost and delivery complexity but establish durable production behavior.</li>
-<li class=""><strong>Required owner:</strong> Platform/data architect and database service owner; application developer supplies PostgreSQL migration and integration verification.</li>
-<li class=""><strong>Implementation sketch:</strong></li>
-</ul>
-<pre><code>deploy PostgreSQL service and inject DB_URL/user/secret
+    <ul class="">
+        <li class=""><strong>Verification:</strong> Run <code>./gradlew test --tests '*ProductionIdentityProviderIntegrationTest'</code> against the approved test issuer and require deterministic 2xx/401/403 behavior for valid and invalid signed tokens.</li>
+        <li class=""><strong>Confidence:</strong> High</li>
+    </ul>
+    <ul class="">
+        <li class="">✅ DTOs are intentional, unexpected errors return generic client-safe messages, and correlation IDs are sanitized before logging context use. (<code>SD-04</code>)</li>
+        <li class="">❓ No data-classification, retention, deletion, residency, or audit policy establishes additional requirements for <code>customerName</code>. (<code>SD-05</code>)</li>
+        <li class="">✅ Local-only H2/Basic facilities are profile-scoped, production disables the H2 console, management routes are restricted, and security failures use Spring Security behavior. (<code>SD-06</code>)</li>
+    </ul>
+    <h3 class="">Reliability and Operational Readiness</h3>
+    <ul class="">
+        <li class="">➖ No downstream client exists for timeout, retry, backoff, cancellation, or retry-storm assessment. (<code>RO-01</code>)</li>
+        <li class="">✅ Writes are transactional, create retry behavior is documented, and update/delete protect against stale state with ETags and optimistic versioning. (<code>RO-02</code>)</li>
+        <li class="">✅ Observed servlet, JPA, datasource, and MDC resources use framework-managed lifecycles; no custom thread, queue, executor, or unmanaged connection path exists. (<code>RO-03</code>)</li>
+        <li class="">✅ Production configuration enables liveness/readiness probes and includes database health in readiness while keeping management exposure bounded. (<code>RO-04</code>)</li>
+        <li class="">✅ The correlation filter propagates or generates a safe identifier, clears MDC in <code>finally</code>, and unexpected exceptions are logged once with stack trace. (<code>RO-05</code>)</li>
+        <li class="">❓ Deployment recovery procedures, rollback ownership, and production incident runbooks are not present. (<code>RO-06</code>)</li>
+    </ul>
+    <h3 class="">Data and Persistence</h3>
+    <ul class="">
+        <li class="">✅ Controllers exchange DTOs, Open Session in View is disabled, service methods perform mapping within transactions, and entities do not cross the HTTP boundary. (<code>DP-01</code>)</li>
+        <li class="">🟡 Database query efficiency is covered by <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a>. (<code>DP-02</code> · <code>FAIL</code>)</li>
+        <li class="">✅ Service-level read-only/write transactions and explicit persistence/conflict translation preserve operation atomicity. (<code>DP-03</code>)</li>
+        <li class="">✅ <code>@Version</code>, <code>If-Match</code>, stale-version responses, and optimistic-lock exception handling provide an explicit lost-update strategy. (<code>DP-04</code>)</li>
+    </ul>
+    <h3 id="issue-5" class="sev-high">🟠 5. Durable PostgreSQL operating contract is not evidenced</h3>
+    <ul class="">
+        <li class=""><strong>Control:</strong> <code>DP-05</code> · Data and Persistence · <code>FAIL</code></li>
+        <li class=""><strong>Type / classification / owner:</strong> Unresolved production architecture contract · Architect decision required · Architect + Developer</li>
+        <li class=""><strong>Location:</strong> <code>src/main/resources/application-prod.properties:1</code>; <code>build.gradle:30</code>; new deployment evidence expected under the platform-owned deployment configuration</li>
+        <li class=""><strong>Available evidence:</strong> PostgreSQL drivers, environment placeholders, and a Flyway migration exist, but all generated test evidence uses H2, including the test running under the <code>prod</code> profile.</li>
+        <li class=""><strong>Decision required:</strong> Select the deployable PostgreSQL service and define credential delivery, availability, migration ownership, backup, restore, point-in-time recovery, monitoring, and recovery objectives.</li>
+        <li class=""><strong>Risk:</strong> PostgreSQL-specific schema behavior or deployment configuration may fail at startup, and durable recovery cannot be assessed from H2 execution.</li>
+        <li class=""><strong>Recommended option:</strong> Use a managed PostgreSQL binding with platform secret injection, Flyway-at-deploy/startup ownership, automated backups, restore drills, and PostgreSQL integration tests.</li>
+        <li class=""><strong>Tradeoff:</strong> Target-engine testing and managed recovery add infrastructure cost and delivery complexity but establish durable production behavior.</li>
+        <li class=""><strong>Required owner:</strong> Platform/data architect and database service owner; application developer supplies PostgreSQL migration and integration verification.</li>
+        <li class=""><strong>Implementation sketch:</strong></li>
+    </ul>
+    <pre><code>deploy PostgreSQL service and inject DB_URL/user/secret
 run Flyway V1 against an empty PostgreSQL database
 start application with prod profile and schema validation
 execute order CRUD and optimistic-lock scenarios
 document backup, restore, availability, and credential owners
 </code></pre>
-<ul class="">
-<li class=""><strong>Verification:</strong> Run the approved PostgreSQL integration task or deployment smoke test, then <code>./gradlew test</code> with target-engine tests; require successful Flyway migration, schema validation, CRUD, rollback, and optimistic-lock behavior.</li>
-<li class=""><strong>Confidence:</strong> High</li>
-</ul>
-<ul class="">
-<li class="">✅ Bean Validation, JPA mappings, and the Flyway schema align on required lengths, decimal precision, nullability, versioning, and timestamps for the evidenced write path. (<code>DP-06</code>)</li>
-</ul>
-<h3 class="">Testing and Verification</h3>
-<ul class="">
-<li class="">✅ Launcher evidence shows <code>./gradlew clean test --console=plain</code>, <code>./gradlew build --console=plain</code>, and the required coverage command completed successfully. (<code>TV-01</code>)</li>
-<li class="">✅ Unit and integration tests cover CRUD, DTO validation, invalid enums, pagination validation, missing resources, stable errors, stale versions, and correlation IDs. (<code>TV-02</code>)</li>
-<li class="">✅ Tests cover persistence conflicts, optimistic-lock translation, stale update/delete protection, and prevention of stale deletes; no downstream retry or messaging behavior applies. (<code>TV-03</code>)</li>
-<li class="">🟡 Signed-token authentication and authorization verification is included in <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>; role lifecycle evidence is included in <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>. (<code>TV-04</code> · <code>PARTIAL</code>)</li>
-<li class="">✅ Unit tests mock only the repository, while MockMvc/Spring tests assert observable HTTP, persistence, security, health, and error behavior with isolated setup. (<code>TV-05</code>)</li>
-<li class="">✅ JaCoCo verification passed at 97.63% line coverage and 85.71% branch coverage, exceeding the configured 85% and 80% thresholds. (<code>TV-06</code>)</li>
-<li class="">❓ Formatting/lint, static analysis, CI, and dependency-vulnerability scanning are absent and therefore unverified. (<code>TV-07</code>)</li>
-</ul>
-<h2>Recommended follow-up</h2>
-<p>None beyond the required developer corrections and architect decisions linked above.</p>
-<h2>Positive engineering decisions</h2>
-<ul class="">
-<li class="">DTO-only HTTP boundaries and the intended package dependency direction are preserved in <code>OrderController</code>, <code>OrderService</code>, and <code>OrderRepository</code>. (<code>AD-01</code>, <code>DP-01</code>)</li>
-<li class="">Create returns <code>201</code> with <code>Location</code>; reads/updates return <code>200</code>; delete returns <code>204</code>; validation and missing-resource behavior use stable <code>ApiError</code> responses. (<code>AI-01</code>)</li>
-<li class=""><code>@Version</code>, ETags, required <code>If-Match</code>, and focused stale update/delete tests provide a coherent lost-update strategy. (<code>AD-04</code>, <code>DP-04</code>)</li>
-<li class="">Production security separates JWT resource-server behavior from local Basic authentication and restricts non-health actuator endpoints. (<code>SD-06</code>)</li>
-<li class="">Readiness includes database health, while correlation identifiers are sanitized, returned to clients, and placed in MDC with guaranteed cleanup. (<code>RO-04</code>, <code>RO-05</code>)</li>
-<li class="">The supplied Gradle commands, 24 passing tests, and JaCoCo thresholds provide reproducible verification evidence. (<code>TV-01</code>, <code>TV-06</code>)</li>
-</ul>
-<h2>Verification summary</h2>
-<ul class="">
-<li class="">✅ <strong>Build:</strong> PASS — <code>./gradlew build --console=plain</code> completed successfully.</li>
-<li class="">✅ <strong>Tests:</strong> PASS — <code>./gradlew clean test --console=plain</code> completed successfully; 24 passed, 0 failed, 0 skipped.</li>
-<li class="">✅ <strong>Coverage:</strong> PASS — <code>./gradlew jacocoTestCoverageVerification jacocoTestReport --console=plain</code>; line 97.63% / 85%, branch 85.71% / 80%.</li>
-<li class="">⚠️ <strong>Additional quality checks:</strong> UNVERIFIED — formatter/lint, static analysis, CI, and dependency-vulnerability scanning are not configured.</li>
-</ul>
-<p><a href="../jacoco/test/html/index.html">Open JaCoCo HTML coverage report</a></p>
-<h2>Exit criteria</h2>
-<ul class="">
-<li class=""><strong>Developer implementation readiness:</strong></li>
-</ul>
-<p>  - Resolve <a href="#issue-1">Issue 1 — Duplicate single-order repository lookup</a> with one-query regression assertions.</p>
-<p>  - Resolve <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a> with repository-level pagination and metadata/query tests.</p>
-<p>  - Re-run the clean test, build, and JaCoCo commands successfully.</p>
-<ul class="">
-<li class=""><strong>Architect review readiness:</strong></li>
-</ul>
-<p>  - The application is already <code>READY FOR ARCHITECT DECISION</code>.</p>
-<p>  - Record decisions for <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>, <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>, and <a href="#issue-5">Issue 5 — Durable PostgreSQL operating contract is not evidenced</a>.</p>
-<ul class="">
-<li class=""><strong>Production readiness:</strong></li>
-</ul>
-<p>  - Implement and verify the approved identity-provider, signed-token/JWKS, role-governance, and PostgreSQL contracts.</p>
-<p>  - Exercise Flyway and CRUD/concurrency behavior against PostgreSQL and signed tokens.</p>
-<p>  - Assign credential, availability, backup, restore, recovery, role-provisioning, and revocation ownership.</p>
-<p>  - Clear all developer, architect-decision, build, test, coverage, conformance, and material evidence gates.</p>
-<h2>Final recommendation</h2>
-<blockquote class="decision-readiness">
-<h2>ENGINEERING READINESS SUMMARY</h2>
-<p><strong>Developer implementation readiness:</strong> 🟠 CHANGES REQUIRED — resolve <a href="#issue-1">Issue 1 — Duplicate single-order repository lookup</a> and <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a>.</p>
-<p><strong>Architect review readiness:</strong> 🟣 READY FOR ARCHITECT DECISION — decide <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>, <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>, and <a href="#issue-5">Issue 5 — Durable PostgreSQL operating contract is not evidenced</a>.</p>
-<p><strong>Production readiness:</strong> 🔴 NOT READY — record, implement, and verify those production contracts and developer corrections first.</p>
-</blockquote>
-<ul class="final-recommendation-cards">
-<li class="card-developer"><strong>Developer next step:</strong> Correct the two linked implementation findings and add focused regression tests.</li>
-<li class="card-architect"><strong>Architect next step:</strong> Decide the linked authorization, authentication, and durable-persistence contracts.</li>
-<li class="card-exit"><strong>Release condition:</strong> Required decisions are recorded, implemented, and target-environment verified; all applicable developer, build, test, coverage, conformance, and evidence gates are clear.</li>
-<li class="card-rerun"><strong>Re-review:</strong> Run <code>./code-review</code> after the corrections and required verification succeed.</li>
-</ul>
+    <ul class="">
+        <li class=""><strong>Verification:</strong> Run the approved PostgreSQL integration task or deployment smoke test, then <code>./gradlew test</code> with target-engine tests; require successful Flyway migration, schema validation, CRUD, rollback, and optimistic-lock behavior.</li>
+        <li class=""><strong>Confidence:</strong> High</li>
+    </ul>
+    <ul class="">
+        <li class="">✅ Bean Validation, JPA mappings, and the Flyway schema align on required lengths, decimal precision, nullability, versioning, and timestamps for the evidenced write path. (<code>DP-06</code>)</li>
+    </ul>
+    <h3 class="">Testing and Verification</h3>
+    <ul class="">
+        <li class="">✅ Launcher evidence shows <code>./gradlew clean test --console=plain</code>, <code>./gradlew build --console=plain</code>, and the required coverage command completed successfully. (<code>TV-01</code>)</li>
+        <li class="">✅ Unit and integration tests cover CRUD, DTO validation, invalid enums, pagination validation, missing resources, stable errors, stale versions, and correlation IDs. (<code>TV-02</code>)</li>
+        <li class="">✅ Tests cover persistence conflicts, optimistic-lock translation, stale update/delete protection, and prevention of stale deletes; no downstream retry or messaging behavior applies. (<code>TV-03</code>)</li>
+        <li class="">🟡 Signed-token authentication and authorization verification is included in <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>; role lifecycle evidence is included in <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>. (<code>TV-04</code> · <code>PARTIAL</code>)</li>
+        <li class="">✅ Unit tests mock only the repository, while MockMvc/Spring tests assert observable HTTP, persistence, security, health, and error behavior with isolated setup. (<code>TV-05</code>)</li>
+        <li class="">✅ JaCoCo verification passed at 97.63% line coverage and 85.71% branch coverage, exceeding the configured 85% and 80% thresholds. (<code>TV-06</code>)</li>
+        <li class="">❓ Formatting/lint, static analysis, CI, and dependency-vulnerability scanning are absent and therefore unverified. (<code>TV-07</code>)</li>
+    </ul>
+    <h2>Recommended follow-up</h2>
+    <p>None beyond the required developer corrections and architect decisions linked above.</p>
+    <h2>Positive engineering decisions</h2>
+    <ul class="">
+        <li class="">DTO-only HTTP boundaries and the intended package dependency direction are preserved in <code>OrderController</code>, <code>OrderService</code>, and <code>OrderRepository</code>. (<code>AD-01</code>, <code>DP-01</code>)</li>
+        <li class="">Create returns <code>201</code> with <code>Location</code>; reads/updates return <code>200</code>; delete returns <code>204</code>; validation and missing-resource behavior use stable <code>ApiError</code> responses. (<code>AI-01</code>)</li>
+        <li class=""><code>@Version</code>, ETags, required <code>If-Match</code>, and focused stale update/delete tests provide a coherent lost-update strategy. (<code>AD-04</code>, <code>DP-04</code>)</li>
+        <li class="">Production security separates JWT resource-server behavior from local Basic authentication and restricts non-health actuator endpoints. (<code>SD-06</code>)</li>
+        <li class="">Readiness includes database health, while correlation identifiers are sanitized, returned to clients, and placed in MDC with guaranteed cleanup. (<code>RO-04</code>, <code>RO-05</code>)</li>
+        <li class="">The supplied Gradle commands, 24 passing tests, and JaCoCo thresholds provide reproducible verification evidence. (<code>TV-01</code>, <code>TV-06</code>)</li>
+    </ul>
+    <h2>Verification summary</h2>
+    <ul class="">
+        <li class="">✅ <strong>Build:</strong> PASS — <code>./gradlew build --console=plain</code> completed successfully.</li>
+        <li class="">✅ <strong>Tests:</strong> PASS — <code>./gradlew clean test --console=plain</code> completed successfully; 24 passed, 0 failed, 0 skipped.</li>
+        <li class="">✅ <strong>Coverage:</strong> PASS — <code>./gradlew jacocoTestCoverageVerification jacocoTestReport --console=plain</code>; line 97.63% / 85%, branch 85.71% / 80%.</li>
+        <li class="">⚠️ <strong>Additional quality checks:</strong> UNVERIFIED — formatter/lint, static analysis, CI, and dependency-vulnerability scanning are not configured.</li>
+    </ul>
+    <p><a href="../jacoco/test/html/index.html">Open JaCoCo HTML coverage report</a></p>
+    <h2>Exit criteria</h2>
+    <ul class="">
+        <li class=""><strong>Developer implementation readiness:</strong></li>
+    </ul>
+    <p>  - Resolve <a href="#issue-1">Issue 1 — Duplicate single-order repository lookup</a> with one-query regression assertions.</p>
+    <p>  - Resolve <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a> with repository-level pagination and metadata/query tests.</p>
+    <p>  - Re-run the clean test, build, and JaCoCo commands successfully.</p>
+    <ul class="">
+        <li class=""><strong>Architect review readiness:</strong></li>
+    </ul>
+    <p>  - The application is already <code>READY FOR ARCHITECT DECISION</code>.</p>
+    <p>  - Record decisions for <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>, <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>, and <a href="#issue-5">Issue 5 — Durable PostgreSQL operating contract is not evidenced</a>.</p>
+    <ul class="">
+        <li class=""><strong>Production readiness:</strong></li>
+    </ul>
+    <p>  - Implement and verify the approved identity-provider, signed-token/JWKS, role-governance, and PostgreSQL contracts.</p>
+    <p>  - Exercise Flyway and CRUD/concurrency behavior against PostgreSQL and signed tokens.</p>
+    <p>  - Assign credential, availability, backup, restore, recovery, role-provisioning, and revocation ownership.</p>
+    <p>  - Clear all developer, architect-decision, build, test, coverage, conformance, and material evidence gates.</p>
+    <h2>Final recommendation</h2>
+    <blockquote class="decision-readiness">
+        <h2>ENGINEERING READINESS SUMMARY</h2>
+        <p><strong>Developer implementation readiness:</strong> 🟠 CHANGES REQUIRED — resolve <a href="#issue-1">Issue 1 — Duplicate single-order repository lookup</a> and <a href="#issue-2">Issue 2 — Pagination loads the entire order table</a>.</p>
+        <p><strong>Architect review readiness:</strong> 🟣 READY FOR ARCHITECT DECISION — decide <a href="#issue-3">Issue 3 — Production role-claim lifecycle is unowned</a>, <a href="#issue-4">Issue 4 — Production JWT trust contract is not verified</a>, and <a href="#issue-5">Issue 5 — Durable PostgreSQL operating contract is not evidenced</a>.</p>
+        <p><strong>Production readiness:</strong> 🔴 NOT READY — record, implement, and verify those production contracts and developer corrections first.</p>
+    </blockquote>
+    <ul class="final-recommendation-cards">
+        <li class="card-developer"><strong>Developer next step:</strong> Correct the two linked implementation findings and add focused regression tests.</li>
+        <li class="card-architect"><strong>Architect next step:</strong> Decide the linked authorization, authentication, and durable-persistence contracts.</li>
+        <li class="card-exit"><strong>Release condition:</strong> Required decisions are recorded, implemented, and target-environment verified; all applicable developer, build, test, coverage, conformance, and evidence gates are clear.</li>
+        <li class="card-rerun"><strong>Re-review:</strong> Run <code>./code-review</code> after the corrections and required verification succeed.</li>
+    </ul>
 
 </main></body></html>
