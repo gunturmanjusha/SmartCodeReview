@@ -9,28 +9,26 @@ Return one complete Markdown document with the sections below in this exact orde
 Start with a prominent plain-language decision block:
 
 ```markdown
-> ## 🟠 DEVELOPER CHANGES REQUIRED — Do not submit for architect approval yet
+> ## ENGINEERING READINESS DECISION
 >
-> **Developer action:** Fix the required items below and rerun the review.
-> **Architect action:** Validate architecture-boundary corrections or make only the verified
-> decisions identified for architect judgment; otherwise state `None`.
+> **Developer implementation readiness:** 🟠 CHANGES REQUIRED — <reason>.
+> **Architect review readiness:** 🟣 READY FOR ARCHITECT DECISION — <reason>.
+> **Production readiness:** 🔴 NOT READY — <reason>.
 > **Top issue:** [Issue 1 — <plain-language problem>](#issue-1) — <one-sentence consequence>.
 > **Build and tests:** <plain-language result>.
 ```
 
-Use these verdict headings consistently:
+Use these decision values consistently:
 
-| Verdict | Heading | PR guidance |
-| --- | --- | --- |
-| `PASS` | `🟢 READY FOR ARCHITECT REVIEW` | May proceed to normal architect review and approval. |
-| `PASS WITH FOLLOW-UP` | `🟡 READY WITH MINOR FOLLOW-UP` | Architect may review with tracked non-blocking follow-up. |
-| `CHANGES REQUIRED` | `🟠 DEVELOPER CHANGES REQUIRED` | Return to the developer before formal architect review. |
-| `FAIL` | `🔴 REVIEW BLOCKED` | Block until the critical failure is resolved. |
-| `INSUFFICIENT EVIDENCE` | `⚪ INSUFFICIENT EVIDENCE` | Do not decide until missing evidence is supplied. |
+| Boundary | Allowed values |
+| --- | --- |
+| Developer implementation readiness | `PASS`; `CHANGES REQUIRED` |
+| Architect review readiness | `READY FOR ARCHITECT REVIEW`; `READY FOR ARCHITECT DECISION`; `NOT READY because required implementation evidence is still missing` |
+| Production readiness | `READY`; `NOT READY`; `INSUFFICIENT EVIDENCE` |
 
 Do not show status counts before the decision.
 
-## Executive assessment
+## Overall engineering assessment
 
 Use exactly these six short, labelled bullets so an architect understands the result without
 reading the rest of the report:
@@ -39,17 +37,17 @@ reading the rest of the report:
   architecture unit. For this repository, say `Java 23 Spring Boot Order Management REST
   microservice` when that remains supported by evidence. Call one independently deployable service
   a `microservice`, not a “microservices application.”
-- **Review decision:** State the plain-language verdict and whether formal architect review may
-  proceed.
-- **Verified flaws:** State the number of `FAIL` and `PARTIAL` findings by severity and whether any
-  one controls the verdict. Also state the architecture-flaw and developer-code-flaw counts.
+- **Readiness:** State all three readiness results and make clear that architect review may proceed
+  when an architect decision is required even if developer corrections also remain.
+- **Verified findings:** State `FAIL` and `PARTIAL` counts by severity and classification: developer
+  implementation defects, architectural conformance violations, architect decisions required, and
+  evidence gaps. Count architecture flaws only when implementation violates established architecture.
 - **Top risk:** Link directly to the detailed issue, name it in plain language, and explain its
   concrete failure/impact in one sentence, for example
   `[Issue 1 — App can report ready while the database is down](#issue-1)`.
 - **Developer action:** Summarize the required corrections, not missing contextual evidence.
-- **Architect action:** State the verified architecture correction to validate or the specific
-  decision required from an architect. Do not promote unavailable external context into an action;
-  otherwise state `None`.
+- **Architect action:** State the specific decisions required, their owners, and the affected
+  production boundary. Do not promote an evidence gap into an architect decision; otherwise state `None`.
 
 Do not use control IDs in this section. Avoid ceremonial praise, vague phrases such as “moderate
 risk” without explanation, and duplication of the category scorecard.
@@ -63,13 +61,15 @@ Use this table:
 | Current branch | `<current branch, detached revision, or unavailable reason>` |
 | Review date | `<YYYY-MM-DD HH:MM:SS timezone and UTC offset>` |
 | Review scope | `<repository / staged / branch comparison and concise diff>` |
-| Can this work proceed? | `<Yes / No / Architect decision>` |
+| Developer implementation readiness | `<PASS / CHANGES REQUIRED and reason>` |
+| Architect review readiness | `<READY FOR ARCHITECT REVIEW / READY FOR ARCHITECT DECISION / NOT READY because required implementation evidence is still missing>` |
+| Production readiness | `<READY / NOT READY / INSUFFICIENT EVIDENCE and reason>` |
 | Build and tests | `<plain-language result>` |
 | Test coverage | `<line percentage vs 85%; branch percentage vs 80% or N/A; gate result>` |
 | Developer fixes | `<count>` |
-| Architect decisions | `<count of verified findings that require a design decision; exclude UNVERIFIED context>` |
-| Architecture flaws | `<count>` |
-| Developer code flaws | `<count>` |
+| Architectural conformance violations | `<count>` |
+| Architect decisions required | `<count; exclude evidence gaps>` |
+| Evidence gaps | `<count>` |
 | Checks meeting the standard | `<PASS count> of <verified applicable count>` |
 | Checks needing evidence | `<UNVERIFIED count>` |
 | Evidence coverage | `<n.nn>% and plain-language confidence>` |
@@ -78,21 +78,46 @@ Use this table:
 State immediately below the table that the standards score is not the percentage of source code
 that is correct, secure, tested, or production-ready.
 
-## Findings and recommended corrections
+## Developer corrections
 
-For every `FAIL` and `PARTIAL`, add one row ordered by Blocker, High, Medium, then Low:
+List only `Developer implementation defect` findings, ordered by Blocker, High, Medium, then Low:
 
 | # | Finding | Category / severity / owner | Evidence | Technical impact | Recommended correction |
 | ---: | --- | --- | --- | --- | --- |
-| [1](#issue-1) | JPA entity exposed through REST API | Architecture and Design · 🟡 Medium · Developer | `OrderController.java:getRaw(Long)` | Persistence fields become part of the HTTP contract. | Remove the raw endpoint and return only `OrderResponse`. |
+| [1](#issue-1) | Duplicate repository lookup | Code Quality and Maintainability · 🟡 Medium · Developer | `OrderService.java:get(Long)` | One request executes the same query twice. | Reuse the entity returned by the first lookup and add a focused regression test. |
 
-Use consecutive human issue numbers. Never use control IDs as issue numbers. Combine repeated
-occurrences with one root cause. If no verified failed or partial control exists, state that no
-verified code correction is required. Do not expose control IDs in this executive-facing table;
+State `None` when no developer implementation defect exists.
+
+## Architectural conformance violations
+
+Use the same table contract for implemented violations of an established architecture or engineering
+standard. State `None` when no violation is verified. Do not place unresolved production contracts
+here and do not count them as architecture flaws.
+
+## Architect decisions required
+
+Use the same table contract for `Architect decision required` findings. Each row must summarize the
+decision, available repository evidence, risk, recommended option, material tradeoff, required owner,
+implementation boundary, and verification. High importance is allowed and may block production
+readiness, but it must route the work to architect review rather than block access to that review.
+State `None` when no architect decision is required.
+
+## Evidence gaps
+
+Summarize all `Evidence gap` findings and `UNVERIFIED` controls in no more than four grouped,
+plain-language bullets. State the affected readiness boundary and exactly what evidence would resolve
+the uncertainty. Do not convert missing organizational or production context into `FAIL` unless
+repository evidence explicitly contradicts an established requirement.
+
+Across the three finding tables, use consecutive human issue numbers. Never use control IDs as issue
+numbers. Combine repeated occurrences with one root cause. If no verified failed or partial control
+exists, state that no verified correction or decision is required. Do not expose control IDs in
+these executive-facing tables;
 introduce them with their evidence in the later detailed assessment. Every row must identify a
 specific file plus line, method, class, configuration key, or missing integration point; explain a
-concrete failure/impact; and state the smallest practical correction. This table is the primary
-architect view of code flaws and recommended fixes. Link the issue number to its detailed action
+concrete failure/impact; and state the smallest practical correction or decision. These tables are
+the primary architect view of defects, conformance violations, and unresolved production contracts.
+Link the issue number to its detailed action
 card using `#issue-N`. Show the full review category, severity, and `Architect`, `Developer`, or
 `Architect + Developer` owner in one compact column.
 
@@ -121,14 +146,6 @@ tests, or executed verification. Missing business, deployment, consumer, or comp
 belongs under evidence needed, not under findings, unless `AGENTS.md` explicitly requires the
 capability and repository evidence proves that only a local substitute, placeholder, or mock exists.
 Prefer a small number of material root causes over filling every category with a flaw.
-
-### Evidence needed to complete the review
-
-- Do not repeat `FAIL` or `PARTIAL` items; they are already visible in the findings table.
-- Summarize all `UNVERIFIED` controls in no more than four grouped, plain-language bullets.
-- Begin each bullet with its full review-category name, describe the missing evidence or decision,
-  and do not expose internal control IDs here.
-- Do not list `N/A`; it appears only in the detailed assessment.
 
 ## Architecture summary
 
@@ -169,7 +186,7 @@ Do not add a second status-count summary, `Percentage met`, or `Percentage not m
 this table. Those values repeat the category assessment and make the decision harder to scan. The
 `At a glance` section already contains the overall score, evidence coverage, passed-control count,
 and missing-evidence count. Individual control statuses remain visible once in the detailed
-assessment. State in the overall architect summary that verdict gates override numerical baselines
+assessment. State in the overall architect summary that readiness gates override numerical baselines
 when a gate affects the decision.
 
 ## Detailed assessment
@@ -195,7 +212,7 @@ one or two sentences and keep the fix sketch between 3 and 10 lines:
 ### 🟡 1. JPA entity exposed through REST API
 
 - **Control:** `AD-01`, `AD-02`, `DP-01` · Architecture and Design · `FAIL`
-- **Type / classification / owner:** Architecture flaw · Local implementation defect · Developer,
+- **Type / classification / owner:** Architecture flaw · Architectural conformance violation · Developer,
   with architect validation
 - **Location:** `src/main/java/.../OrderController.java:getRaw(Long)` and
   `OrderService.java:getEntity(Long)`
@@ -224,8 +241,10 @@ one or two sentences and keep the fix sketch between 3 and 10 lines:
 Action-card rules:
 
 - Use the same issue number as the findings table.
-- `Type / classification / owner` is required. Use exactly `Architecture flaw` or `Developer code
-  flaw` for the type, followed by the evidence-based classification and owner.
+- `Type / classification / owner` is required. Use `Developer code flaw` for a developer
+  implementation defect, `Architecture flaw` only for an architectural conformance violation, and
+  `Unresolved production architecture contract` for an architect decision required. Follow it with
+  the evidence-based classification and owner. Use `Evidence gap` for missing verification context.
 - Use exact paths and lines plus a method/class anchor when code exists.
 - For a missing artifact, write `New file: <expected path>` and name the existing integration point.
 - `Repository evidence` must cite observed behavior, not inference presented as fact.
@@ -238,10 +257,11 @@ Action-card rules:
   include a unified diff or full class in the architect report.
 - Keep the sketch focused on the correction and its boundary. Do not add unrelated redesign,
   dependencies, framework layers, or invented APIs.
-- For an architect-owned finding, include `Decision required`, `Recommended option`, `Tradeoff`, and
-  `Implementation sketch`. The sketch must be 3–10 lines of configuration, deployment pseudocode,
-  architecture steps, or contract definitions showing how the decision integrates; do not emit a
-  full manifest or pretend the decision has already been made.
+- For an architect-owned finding, include `Decision required`, `Available evidence`, `Risk`,
+  `Recommended option`, `Tradeoff`, `Required owner`, and `Implementation sketch`. The sketch must
+  be 3–10 lines of configuration, deployment pseudocode, architecture steps, or contract definitions
+  showing how the decision integrates; do not emit a full manifest or pretend the decision has
+  already been made.
 - A finding must arise from repository evidence. Do not promote `UNVERIFIED` context into a flaw or
   choose an issue because it makes the demonstration more dramatic.
 - `Verification` must contain an executable command and focused expected behavior.
@@ -260,24 +280,6 @@ line under its full category heading instead of duplicating the issue:
 ```
 
 Use severity markers consistently: 🔴 Blocker, 🟠 High, 🟡 Medium, 🔵 Low.
-
-## Architect review
-
-### Issues developers should resolve before PR submission
-
-List concise references to local implementation defects that developers can correct without an
-architecture decision. Include issue number, control ID, owner/action, and verification. Do not
-repeat full evidence. State `None` when no such issue exists.
-
-### Decisions requiring architect judgment
-
-List only cross-system impact, long-term design direction, business tradeoffs, scalability, data
-ownership, security posture, platform standards, migration strategy, accepted technical debt, and
-verified findings that cannot be corrected safely until an architect makes a choice. State the
-decision needed and evidence available. Do not turn routine code corrections or missing external
-context into architect decisions. Keep `UNVERIFIED` context only in the control-assessment section.
-State `None` when no such decision exists; an architect may still validate completed
-architecture-boundary corrections during normal review.
 
 ## Recommended follow-up
 
@@ -315,30 +317,39 @@ Show exact line and branch coverage, thresholds, and gate result in the compact 
 no branch counter exists, report `N/A — no branch instructions`. Never expose or ask the architect
 to read coverage XML; provide only the clickable JaCoCo HTML link.
 
+## Exit criteria
+
+Use three concise labelled lists:
+
+- **Developer implementation readiness:** Name the code corrections, regression evidence, and
+  build/test/coverage conditions required to reach `PASS`.
+- **Architect review readiness:** Name the decisions or implementation evidence required for the
+  next architect-review state. An unresolved architect decision is itself evidence that the work is
+  `READY FOR ARCHITECT DECISION`, not a reason to withhold it from the architect.
+- **Production readiness:** Name the recorded decisions, implemented production contracts,
+  target-environment verification, operational ownership, and material evidence needed for `READY`.
+
 ## Final recommendation
 
 Use this concise enterprise structure:
 
 ```markdown
-> ## 🟠 DEVELOPER CHANGES REQUIRED BEFORE ARCHITECT REVIEW
+> ## ENGINEERING READINESS SUMMARY
 >
-> **Disposition:** Hold formal approval. The build may be healthy, but verified implementation defects
-> or unresolved production architecture contracts still require action.
->
-> **Release condition:** Resolve or explicitly accept every linked finding with evidence. A numerical
-> score or passing build must not override a verified High or Blocker finding.
+> **Developer implementation readiness:** 🟠 CHANGES REQUIRED — resolve the linked implementation defects.
+> **Architect review readiness:** 🟣 READY FOR ARCHITECT DECISION — decide the linked production contracts.
+> **Production readiness:** 🔴 NOT READY — record, implement, and verify those decisions first.
 
-- **🟡 Developer next step:** Correct the linked implementation findings and add focused regression tests.
-- **🟣 Architect next step:** Decide the linked cross-system, security, data, or platform contracts.
-- **🟢 Exit criteria:** Required decisions are recorded, corrections and tests pass, and no verdict gate remains.
-- **🔵 Re-review:** Run `./code-review` after the corrections and required verification succeed.
+- **Developer next step:** Correct the linked implementation findings and add focused regression tests.
+- **Architect next step:** Decide the linked cross-system, security, data, or platform contracts.
+- **Release condition:** Required decisions are recorded, implemented, and verified; all applicable
+  developer, build, test, coverage, conformance, and evidence gates are clear.
+- **Re-review:** Run `./code-review` after the corrections and required verification succeed.
 ```
 
-Choose the opening recommendation from: `Ready for architect review`, `Ready with minor follow-up`,
-`Developer changes required before architect review`, `Major architectural changes required`, or
-`Insufficient evidence`. Refer to findings by linked issue number and professional title, never by
-an unexplained control ID, score formula, baseline gap, or “controlling gate.” Do not repeat scores,
-coverage, command results, or evidence coverage here; they already appear above. Never imply that
-the tool approved, rejected, merged, committed, or pushed. Link the disposition and action text to
-the relevant professional issue titles. Keep this section compact: one decision banner and no more
-than four action cards.
+Report all three decisions exactly as calculated. Refer to findings by linked issue number and
+professional title, never by an unexplained control ID, score formula, baseline gap, or “controlling
+gate.” Do not repeat scores, coverage, command results, or evidence coverage here; they already
+appear above. Never imply that the tool approved, rejected, merged, committed, or pushed. Link the
+disposition and action text to the relevant professional issue titles. Keep this section compact:
+one decision banner and no more than four action lines.

@@ -44,38 +44,62 @@ describe it as the percentage of source code that is correct, safe, secure, test
 
 Show each score, baseline gap, and evidence coverage. Retain status counts for arithmetic and the
 compact `At a glance` totals, but do not repeat per-category raw counts in the architect report.
-Baselines are diagnostic; the verdict gates remain authoritative.
+Baselines are diagnostic; the readiness gates remain authoritative.
 
-## Verdict gates
+## Readiness boundaries and ordered gates
 
-Apply gates in order. A numerical score never overrides a serious verified finding:
+Report three independent decisions. A numerical score never overrides a serious verified finding,
+and a result on one boundary must not be substituted for another.
 
-1. Any Blocker finding produces `FAIL`.
-2. A required build or test failure caused by reviewed code produces `FAIL`.
-3. Line coverage below 85%, branch coverage below 80% when branch instructions exist, or failure of
-   `jacocoTestCoverageVerification` produces `FAIL`.
-4. Any High finding produces `CHANGES REQUIRED`.
-5. Evidence coverage below 60% produces `INSUFFICIENT EVIDENCE` unless a prior fail gate applies.
-6. Any Medium `FAIL`, or overall satisfaction below 70%, produces `CHANGES REQUIRED`.
-7. Satisfaction of at least 85%, with no `FAIL`, produces `PASS`.
-8. Otherwise produce `PASS WITH FOLLOW-UP`.
+### Developer implementation readiness
 
-Map verdicts to architect guidance:
+Use `PASS` or `CHANGES REQUIRED`. Apply these gates in order:
 
-| Verdict | Final recommendation |
-| --- | --- |
-| `PASS` | Ready for architect review |
-| `PASS WITH FOLLOW-UP` | Ready with minor follow-up |
-| `CHANGES REQUIRED` | Developer changes required before architect review |
-| `FAIL` | Major architectural changes required when a Blocker is architectural; otherwise developer changes required before architect review |
-| `INSUFFICIENT EVIDENCE` | Insufficient evidence |
+1. A required build/test failure caused by reviewed code, a coverage-gate failure, or any Blocker
+   developer implementation defect or architectural conformance violation produces `CHANGES REQUIRED`.
+2. Any High developer implementation defect or architectural conformance violation produces
+   `CHANGES REQUIRED` and blocks PR approval.
+3. Any Medium `FAIL` in either of those classifications, or overall satisfaction below 70%, produces
+   `CHANGES REQUIRED`.
+4. Otherwise produce `PASS`.
 
-The architect owns the final decision. The tool never approves, rejects, merges, commits, or pushes.
+Architect decisions and evidence gaps do not count as implemented developer defects. They may
+require later developer work after a decision is recorded, but do not change this boundary merely
+because that work cannot yet be implemented.
+
+### Architect review readiness
+
+Use `READY FOR ARCHITECT REVIEW`, `READY FOR ARCHITECT DECISION`, or `NOT READY because required
+implementation evidence is still missing`. Apply these gates in order:
+
+1. A required build/test/coverage failure or a material implementation gap that prevents meaningful
+   architecture evaluation produces `NOT READY because required implementation evidence is still missing`.
+2. One or more `Architect decision required` findings produces `READY FOR ARCHITECT DECISION`.
+3. Otherwise produce `READY FOR ARCHITECT REVIEW`.
+
+Developer defects that do not prevent evaluation may coexist with `READY FOR ARCHITECT DECISION`;
+they remain visible under developer implementation readiness. An architect-owned decision routes
+work to the architect and never produces “do not submit for architect review” by itself.
+
+### Production or release readiness
+
+Use `READY`, `NOT READY`, or `INSUFFICIENT EVIDENCE`. Apply these gates in order:
+
+1. Any Blocker, required build/test/coverage failure, unresolved material architect decision,
+   architectural conformance violation, or High developer defect produces `NOT READY`.
+2. A material evidence gap affecting production behavior, or overall evidence coverage below 60%,
+   produces `INSUFFICIENT EVIDENCE` unless the prior gate already establishes `NOT READY`.
+3. Any remaining verified release-affecting `FAIL` or `PARTIAL` produces `NOT READY`.
+4. Otherwise produce `READY`.
+
+Baselines remain diagnostic. Standards satisfaction does not override these gates. The architect
+owns the final approval decision; the tool never approves, rejects, merges, commits, or pushes.
 
 ## Finding evidence contract
 
-Every `FAIL` and `PARTIAL` must include: control ID; category; severity; classification (`Local
-implementation defect`, `Architectural concern`, `Deliberate tradeoff`, or `Context required`);
+Every `FAIL` and `PARTIAL` must include: control ID; category; severity; classification (`Developer
+implementation defect`, `Architectural conformance violation`, `Architect decision required`, or
+`Evidence gap`);
 exact file and line range or method; observed implementation; concrete failure scenario; technical
 or business impact; smallest practical correction; verification step; confidence (`High`, `Medium`,
 or `Low`); and whether developer action or architect judgment owns the next decision.
@@ -171,24 +195,27 @@ applied migration.
 Apply these explicit repository standards in full-repository review:
 
 - If H2 is the only exercised runtime database and PostgreSQL exists only as a driver plus unresolved
-  properties, mark `DP-05` `FAIL` as an `Architecture flaw`. Require a deployable PostgreSQL contract,
-  target-engine migration verification, and backup/restore/availability ownership. Do not claim that
-  PostgreSQL is running merely because configuration exists.
+  properties, mark `DP-05` `FAIL` as `Architect decision required`, not as an architecture flaw.
+  Require a decision on the deployable PostgreSQL contract, credentials, availability, backup,
+  restore, and recovery ownership, followed by target-engine migration verification. Do not claim
+  that PostgreSQL is running merely because configuration exists.
 - If production JWT behavior is exercised only through a mocked `JwtDecoder` and no signed-token,
   JWKS, issuer, or identity-provider contract test exists, mark `SD-03` `FAIL` as an independent
-  authentication `Architecture flaw`.
+  `Architect decision required` for issuer, audience, JWKS, key rotation, validation, and failure
+  behavior; do not label the unresolved trust contract an architecture flaw.
 - If route-level role checks exist but the external roles-claim schema, allowed values,
   provisioning/revocation ownership, and signed-token allow/deny behavior are not evidenced, mark
-  `SD-01` `PARTIAL` as an authorization `Architecture flaw`; acknowledge the implemented rules.
+  `SD-01` `PARTIAL` as `Architect decision required`; acknowledge the implemented rules and request
+  a decision on the claim contract and lifecycle ownership rather than calling it an architecture flaw.
 - Keep those three root causes separate. Their owners, failure scenarios, decisions, and
   verification plans are different.
 - `AI-03` evaluates the client-visible pagination contract. When page/size validation, ordering,
   metadata, and results are correct, an internal full-table read does not reduce `AI-03`; assess the
-  unbounded query through `DP-02` and `QM-04` only.
+  unbounded query through `DP-02` and `QM-04` only as a `Developer implementation defect`.
 - Under `QM-02`, treat repeated identical repository reads inside one method with no intervening
-  state change as a separate developer code flaw: the method must reuse the first result. This is
-  independent of full-table pagination because it affects single-resource get, update, and delete
-  paths and has its own correction and verification.
+  state change as a separate `Developer implementation defect`: the method must reuse the first
+  result. This is independent of full-table pagination because it affects single-resource get,
+  update, and delete paths and has its own correction and verification.
 
 ## Testing and Verification — 10%
 

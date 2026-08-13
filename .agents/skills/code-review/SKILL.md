@@ -27,20 +27,27 @@ reliability and operations, persistence, and verification. Do not report persona
 as defects. Do not claim exploitability, failure, scale limits, or production behavior unless an
 executable code path or repository artifact supports the conclusion.
 
-Classify every failed or partial result as one of:
+Classify every failed or partial result as exactly one of:
 
-- `Local implementation defect` — correction is contained within the current implementation;
-- `Architectural concern` — resolution affects boundaries, contracts, data ownership, platforms,
-  security posture, scalability, migration strategy, or more than one component;
-- `Deliberate tradeoff` — evidence documents the choice and its consequences, but follow-up may remain;
-- `Context required` — a decision cannot be verified without business, platform, or operational input.
+- `Developer implementation defect` — the repository standard is established and the developer can
+  correct and verify the implementation without a new architecture decision;
+- `Architectural conformance violation` — implemented code contradicts an already-approved
+  repository architecture or engineering standard;
+- `Architect decision required` — an unresolved platform, operating-model, ownership, security,
+  data, or cross-system choice must be made before implementation can be completed and verified;
+- `Evidence gap` — the design may be valid, but repository evidence is insufficient to verify it.
+
+Use `Architecture flaw` only for a verified `Architectural conformance violation` or an evidenced
+system-level failure created by implemented architecture. Never use it merely because a production
+contract awaits an architect decision. Preserve `UNVERIFIED` for evidence gaps unless repository
+evidence explicitly contradicts an established requirement.
 
 ## Required references
 
 Read these files completely before reviewing:
 
 1. Repository root `AGENTS.md` for repository-specific standards and supported commands.
-2. `references/REVIEW_CONTROLS.md` for the seven categories, controls, scoring, and verdict gates.
+2. `references/REVIEW_CONTROLS.md` for the seven categories, controls, scoring, and readiness gates.
 3. `references/REPORT_FORMAT.md` for the exact architect report contract.
 
 ## Select scope
@@ -73,7 +80,8 @@ finding must be caused by, exposed by, or necessary to integrate the in-scope ch
 4. Evaluate every control in `REVIEW_CONTROLS.md` exactly once. Assign `PASS`, `PARTIAL`, `FAIL`,
    `UNVERIFIED`, or `N/A` and retain concrete evidence for the result.
 5. Calculate category satisfaction, category evidence coverage, status counts, weighted overall
-   satisfaction, overall evidence coverage, baseline gaps, and verdict. Recheck the arithmetic.
+   satisfaction, overall evidence coverage, baseline gaps, and all three readiness decisions.
+   Recheck the arithmetic and apply each readiness boundary independently.
 6. Group repeated symptoms and their missing regression tests under one root-cause finding. A
    failed implementation control and a testing control that exists only to prove the same fix are
    one issue, not two. Separate routine developer corrections from decisions requiring architect
@@ -97,19 +105,20 @@ finding must be caused by, exposed by, or necessary to integrate the in-scope ch
   external systems, requirements, or scores. Do not inflate severity.
 - Every `FAIL` or `PARTIAL` must identify a stable `path:line` or method when code exists. If the
   correction needs a new artifact, name its expected path and existing integration point.
-- Label each root cause `Architecture flaw` when it violates boundaries, dependency direction,
-  public contracts, transaction ownership, production data architecture, identity/trust design,
-  deployment integration, or solution structure. Label it `Developer code flaw` when it is a
-  localized correctness, validation, error-handling, performance, or implementation defect.
+- Label a root cause `Architecture flaw` only when implemented code violates established boundaries,
+  dependency direction, public contracts, transaction ownership, security boundaries, or solution
+  structure. Label it `Developer code flaw` when it is a localized correctness, validation,
+  error-handling, performance, or implementation defect. Label unresolved production contracts
+  `Architect decision required`; they are not implemented architecture flaws.
 - Include observed implementation, realistic failure scenario, technical or business impact,
   smallest practical correction, executable verification, confidence, and finding classification.
 - For a developer-owned correction, show the exact class or method to change, a short fix sketch,
   and the focused regression test to add or update. The sketch may be pseudocode when full syntax
   would obscure the recommendation; never print a full-file patch in the report.
-- For an architect-owned concern, state the concrete repository evidence, decision required,
+- For an `Architect decision required` finding, state the concrete repository evidence, decision required,
   recommended option, material tradeoff, a concise 3–10 line implementation sketch or deployment
-  pseudocode, and an executable verification plan. Do not invent an architecture finding from
-  missing business, scale, deployment, consumer, or compliance context.
+  pseudocode, required owner, and an executable verification plan. Do not invent an architecture
+  finding from missing business, scale, deployment, consumer, or compliance context.
 - Treat missing context as `UNVERIFIED`, not as a flaw. Never select findings merely to lower a
   score or create a more dramatic demonstration.
 - Distinguish unknown context from a missing repository-required capability. When `AGENTS.md`
@@ -125,9 +134,9 @@ finding must be caused by, exposed by, or necessary to integrate the in-scope ch
   ordering, response metadata, and HTTP behavior remain correct, do not downgrade API Design solely
   because persistence loads too many rows; assess that defect under persistence/performance and its
   directly missing regression evidence.
-- Keep missing external context in the evidence-needed/control-assessment section. Do not convert
-  it into an architect action, architect decision, required follow-up, or verdict driver unless a
-  verified finding depends on a decision that is explicitly within the review scope.
+- Keep missing external context in the evidence-gap/control-assessment section. Do not convert it
+  into an architect action, architect decision, required follow-up, or readiness driver unless a
+  verified finding depends on a decision explicitly required by repository standards.
 - Do not cascade one root cause across tangential controls. Downgrade only controls whose stated
   requirement is directly contradicted by observed code. A possible future consequence is impact
   evidence, not grounds to fail an otherwise satisfied security, reliability, or quality control.

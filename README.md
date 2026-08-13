@@ -134,11 +134,11 @@ xdg-open build/reports/code-review/latest.html
 start build/reports/code-review/latest.html
 ```
 
-The report leads with the decision and a color-coded executive assessment that identifies the
-Spring Boot Order Management REST microservice, the verified flaw count, the highest risk, and the
-developer and architect actions. A **Findings and recommended corrections** table then shows the
-category, severity, owner, repository evidence, technical impact, and recommended correction for
-every failed or partial result. Issue links jump directly to the detailed evidence and verification.
+The report leads with three independent decisions—developer implementation readiness, architect
+review or decision readiness, and production readiness—and a color-coded overall engineering
+assessment. Dedicated sections separate developer corrections, architectural conformance
+violations, architect decisions required, and evidence gaps. Issue links jump directly to the
+detailed evidence and verification.
 Related implementation and testing symptoms are grouped into one root-cause issue instead of
 appearing as duplicate flaws. Each developer-owned issue includes a short Java, SQL, configuration,
 or pseudocode fix sketch tied to the exact class or method, plus the focused test to run. Full source
@@ -153,10 +153,12 @@ evidence, failure scenario, technical impact, recommended correction, confidence
 command. Passing controls remain
 compact so architects can focus on material decisions.
 
-Every root cause is labelled as an **Architecture flaw** or **Developer code flaw**. Independently
-actionable defects remain separate even when they appear in the same Java class, so architects can
-validate boundary and contract corrections while developers receive precise implementation and
-regression-test guidance.
+Every nonpassing result is classified as a **Developer implementation defect**, **Architectural
+conformance violation**, **Architect decision required**, or **Evidence gap**. “Architecture flaw”
+is reserved for implemented conformance violations or verified system-level architecture failures;
+an unresolved production contract is routed to architect decision and may block production
+readiness without blocking access to architect review. Independently actionable defects remain
+separate even when they appear in the same Java class.
 
 ### Review scopes
 

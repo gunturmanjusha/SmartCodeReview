@@ -118,10 +118,10 @@ Publication excerpt A — GitHub path `AGENTS.md#L18-L25` (8 lines):
   persistence code, and tests only when needed to establish impact.
 - Load `AGENTS.md`, apply every control from `REVIEW_CONTROLS.md` exactly once, and emit the contract
   defined by `REPORT_FORMAT.md`.
-- Classify nonpassing evidence as a local implementation defect, architectural concern, deliberate
-  tradeoff, or context required.
-- Group symptoms by root cause, calculate satisfaction and coverage, apply verdict gates, and
-  separate developer corrections from architect decisions.
+- Classify nonpassing evidence as a developer implementation defect, architectural conformance
+  violation, architect decision required, or evidence gap.
+- Group symptoms by root cause, calculate satisfaction and coverage, apply independent readiness
+  gates, and separate developer corrections from architect decisions.
 - Use `UNVERIFIED` when relevant evidence or business/platform context is missing, without
   fabricating a finding.
 
@@ -163,13 +163,13 @@ Weights and baselines are: Architecture 20%/85%; Code Quality 15%/80%; API and I
 15%/85%; Security 15%/85%; Reliability 15%/85%; Data and Persistence 10%/85%; Testing 10%/80%;
 overall baseline 85% (`REVIEW_CONTROLS.md:32-47`).
 
-Severity is Blocker, High, Medium, or Low. Verdict gates are applied in order: Blocker, reviewed-code
-build/test failure, or coverage-gate failure produces `FAIL`; any High produces `CHANGES REQUIRED`;
-coverage below 60% produces `INSUFFICIENT EVIDENCE` unless a prior fail gate applies; Medium
-`FAIL` or satisfaction below 70% produces `CHANGES REQUIRED`; at least 85% with no `FAIL` produces
-`PASS`; otherwise the verdict is `PASS WITH FOLLOW-UP`. A serious finding therefore overrides the
-numeric baseline (`REVIEW_CONTROLS.md:49-73`). Developer action and architect judgment are explicit
-required fields in the finding evidence contract (`REVIEW_CONTROLS.md:75-87`).
+Severity is Blocker, High, Medium, or Low. Ordered gates are applied independently to developer
+implementation readiness, architect review/decision readiness, and production readiness. Build,
+test, coverage, and serious implemented defects can block developer or PR readiness; architect-owned
+production contracts route work to architect decision and may block production readiness without
+blocking architect review. Material evidence gaps reduce assurance and can produce `INSUFFICIENT
+EVIDENCE` at the affected boundary. A serious finding therefore overrides the numeric baseline.
+Developer action and architect judgment remain explicit fields in the finding evidence contract.
 
 Publication excerpt C — GitHub path
 `.agents/skills/code-review/references/REVIEW_CONTROLS.md#L5-L13` (9 lines):
