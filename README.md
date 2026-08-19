@@ -1,9 +1,22 @@
 # Smart Code Review
 
-Smart Code Review combines a small Order Management microservice with a repository-local,
-Markdown-driven Solution Architect review model. The service is the demonstration codebase;
-`AGENTS.md`, `.agents/skills/code-review`, and `./code-review` contain the review standards and
-automation.
+Smart Code Review is a Java 23 and Spring Boot microservice project. It combines an independently
+deployable Order Management REST microservice with a repository-local, Markdown-driven Solution
+Architect review model. The service is the demonstration codebase; `AGENTS.md`,
+`.agents/skills/code-review`, and `./code-review` contain the review standards and automation.
+
+## Microservice architecture
+
+The repository currently contains one independently deployable Order Management service. Clients
+use synchronous REST endpoints under `/api/orders`; requests flow through the controller, service,
+repository, and entity layers before being persisted with Spring Data JPA. DTOs define the public
+HTTP contract, while security, correlation IDs, health probes, and exception translation are kept
+as cross-cutting concerns.
+
+The local profile uses an in-memory H2 database and demonstration authentication. The production
+profile is designed for PostgreSQL and a stateless OAuth 2.0 JWT resource server. This is a single
+microservice project rather than a distributed system containing multiple cooperating services;
+no service-to-service calls or messaging integrations are currently implemented.
 
 ## Technology
 
